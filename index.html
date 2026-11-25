@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>減法遊樂園大冒險 3.3</title>
+    <title>減法遊樂園大冒險</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        /* 跨平台終極防呆：防縮放、防下拉重整、防文字選取 */
+        /* 跨平台防呆：防雙擊縮放、防下拉重整、防誤選文字 */
         * {
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
             -webkit-user-select: none;
-            box-sizing: border-box;
         }
 
         body, html {
@@ -21,11 +21,11 @@
             width: 100vw;
             height: 100dvh;
             overflow: hidden;
-            background-color: #e0f2fe;
-            background-image: radial-gradient(#bae6fd 18%, transparent 19%), radial-gradient(#fef08a 18%, transparent 19%);
-            background-size: 44px 44px;
-            background-position: 0 0, 22px 22px;
-            font-family: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+            background-color: #E0F2FE;
+            background-image: radial-gradient(#BAE6FD 18%, transparent 19%), radial-gradient(#BAE6FD 18%, transparent 19%);
+            background-size: 36px 36px;
+            background-position: 0 0, 18px 18px;
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
             overscroll-behavior: none;
         }
 
@@ -39,277 +39,262 @@
             display: flex;
         }
 
-        /* 3D 果凍按鈕 */
+        /* ==================== Screen 1: 角色選擇 ==================== */
+        .char-card {
+            width: clamp(86px, 20vw, 130px);
+            height: clamp(86px, 20vw, 130px);
+            background: #FFFFFF;
+            border-radius: 2rem;
+            border: 6px solid #38BDF8;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 0 #0284C7;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .char-card:active {
+            transform: translateY(8px);
+            box-shadow: 0 2px 0 #0284C7;
+        }
+
+        /* ==================== Screen 2: 冒險地圖 ==================== */
+        .map-bg {
+            background: linear-gradient(180deg, #7DD3FC 0%, #E0F2FE 48%, #BBF7D0 100%);
+            border: 8px solid #38BDF8;
+            border-radius: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .map-node {
+            width: clamp(50px, 11vw, 66px);
+            height: clamp(50px, 11vw, 66px);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(1.3rem, 3.5vw, 1.7rem);
+            font-weight: 900;
+            z-index: 10;
+            transition: all 0.25s;
+            position: relative;
+        }
+        .node-locked {
+            background-color: #CBD5E1;
+            color: #64748B;
+            box-shadow: 0 6px 0 #94A3B8;
+            cursor: not-allowed;
+        }
+        .node-unlocked {
+            background-color: #FACC15;
+            color: #854D0E;
+            box-shadow: 0 6px 0 #CA8A04;
+            cursor: pointer;
+            border: 4px solid #FFFFFF;
+        }
+        .node-unlocked:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #CA8A04;
+        }
+        .map-path {
+            position: absolute;
+            width: 12px;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 8%;
+            bottom: 8%;
+            border-radius: 999px;
+        }
+        .avatar {
+            position: absolute;
+            top: -42px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(2rem, 5vw, 2.7rem);
+            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
+            animation: floatAvatar 2s infinite ease-in-out;
+            z-index: 20;
+            pointer-events: none;
+        }
+        @keyframes floatAvatar {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -8px); }
+        }
+
+        /* ==================== Screen 3: 遊戲互動元件 ==================== */
         .jelly-btn {
             position: relative;
             transition: transform 0.1s, box-shadow 0.1s;
-            border-radius: 1.25rem;
-            border: 3px solid rgba(255, 255, 255, 0.75);
-            cursor: pointer;
+            border-radius: 1.3rem;
+            border: 4px solid rgba(255, 255, 255, 0.6);
         }
         .jelly-btn:active:not(:disabled) {
             transform: translateY(4px);
             box-shadow: none !important;
         }
         .jelly-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.45;
             cursor: not-allowed;
+            box-shadow: none !important;
         }
 
-        .btn-white { background-color: #ffffff; box-shadow: 0 6px 0 #cbd5e1; color: #1e293b; }
-        .btn-amber { background-color: #fef08a; box-shadow: 0 6px 0 #eab308; color: #854d0e; }
-        .btn-blue  { background-color: #bae6fd; box-shadow: 0 6px 0 #0284c7; color: #075985; }
-        .btn-pink  { background-color: #fbcfe8; box-shadow: 0 6px 0 #db2777; color: #9d174d; }
-        .btn-gray  { background-color: #e2e8f0; box-shadow: 0 6px 0 #64748b; color: #334155; }
-        .btn-green { background-color: #bbf7d0; box-shadow: 0 6px 0 #16a34a; color: #14532d; }
+        .btn-white { background-color: #FFFFFF; box-shadow: 0 7px 0 #CBD5E1; color: #1E293B; }
+        .btn-pink { background-color: #FBCFE8; box-shadow: 0 7px 0 #F472B6; color: #9D174D; border-color: #FCE7F3; }
+        .btn-blue { background-color: #BAE6FD; box-shadow: 0 7px 0 #38BDF8; color: #075985; border-color: #E0F2FE; }
+        .btn-gray { background-color: #E2E8F0; box-shadow: 0 7px 0 #94A3B8; color: #334155; }
 
-        /* 角色選擇卡片 */
-        .char-card {
-            width: clamp(95px, 21vw, 140px);
-            height: clamp(95px, 21vw, 140px);
-            background: #ffffff;
-            border-radius: 2rem;
-            border: 6px solid #38bdf8;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 10px 0 #0284c7;
-            cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.15s;
-        }
-        .char-card:active {
-            transform: translateY(8px);
-            box-shadow: 0 2px 0 #0284c7;
-        }
-
-        /* 闖關地圖樣式（7 關響應式自適應排列） */
-        .map-bg {
-            background: linear-gradient(180deg, #7dd3fc 0%, #e0f2fe 48%, #bbf7d0 100%);
-            border: 6px solid #ffffff;
-            border-radius: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-        .map-path {
-            position: absolute;
-            width: 14px;
-            background-color: rgba(255, 255, 255, 0.85);
-            border-radius: 999px;
-            left: 50%;
-            transform: translateX(-50%);
-            top: 7%;
-            bottom: 7%;
-            z-index: 1;
-        }
-        .map-node {
-            width: clamp(44px, 9.5vw, 58px);
-            height: clamp(44px, 9.5vw, 58px);
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-weight: 900;
-            z-index: 10;
-            position: relative;
-            transition: transform 0.2s;
-        }
-        .node-locked {
-            background-color: #cbd5e1;
-            color: #64748b;
-            box-shadow: 0 5px 0 #94a3b8;
-            border: 3px solid #f1f5f9;
-            cursor: not-allowed;
-        }
-        .node-unlocked {
-            background-color: #fde047;
-            color: #854d0e;
-            box-shadow: 0 6px 0 #ca8a04;
-            border: 3px solid #ffffff;
-            cursor: pointer;
-        }
-        .node-unlocked:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #ca8a04;
-        }
-        .avatar-pin {
-            position: absolute;
-            top: -38px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: clamp(2rem, 5vw, 2.7rem);
-            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
-            animation: floatAvatar 1.8s infinite ease-in-out;
-            pointer-events: none;
-            z-index: 25;
-        }
-        @keyframes floatAvatar {
-            0%, 100% { transform: translate(-50%, 0); }
-            50% { transform: translate(-50%, -7px); }
-        }
-
-        /* 算式防呆框（方形填數字、圓形填符號） */
+        /* 算式框 */
         .slot-box {
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            color: #0f172a;
-            background-color: #ffffff;
-            box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.08);
+            color: #0F172A;
+            background-color: #FFFFFF;
+            box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.08);
             cursor: pointer;
             transition: all 0.2s;
         }
         .slot-square {
-            border-radius: 1rem;
-            border: 4px solid #64748b;
-            width: clamp(2.8rem, 13vw, 5rem);
-            height: clamp(3rem, 13vw, 5.2rem);
-            font-size: clamp(1.6rem, 6vw, 3rem);
+            border-radius: 1.1rem;
+            border: 4px solid #94A3B8;
+            width: clamp(3.1rem, 14vw, 5.4rem);
+            height: clamp(3.6rem, 16vw, 6rem);
+            font-size: clamp(1.8rem, 7vw, 3.3rem);
         }
         .slot-circle {
             border-radius: 50%;
-            border: 4px solid #64748b;
-            width: clamp(2.3rem, 10.5vw, 4.2rem);
-            height: clamp(2.3rem, 10.5vw, 4.2rem);
-            font-size: clamp(1.3rem, 5vw, 2.4rem);
+            border: 4px solid #94A3B8;
+            width: clamp(2.5rem, 11vw, 4.4rem);
+            height: clamp(2.5rem, 11vw, 4.4rem);
+            font-size: clamp(1.4rem, 5.5vw, 2.5rem);
         }
         .slot-locked {
-            background-color: #f1f5f9 !important;
-            color: #334155 !important;
-            border-color: #94a3b8 !important;
+            background-color: #E2E8F0;
+            color: #475569;
+            border-color: #94A3B8;
             cursor: not-allowed;
         }
-        /* 第 1 關 & 第 6 關已知算式部分：深色高對比清晰呈現 */
-        .slot-clear-display {
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-            border-color: #475569 !important;
-            cursor: default;
-            box-shadow: 0 3px 0 #cbd5e1;
+
+        /* 第 4、5 關：紙本學習單同款色彩提示框（藍框全部 / 紅框拿走 / 黃底剩下） */
+        .slot-blue-hint {
+            border-color: #2563EB !important;
+            background-color: #EFF6FF !important;
+            border-width: 5px !important;
         }
-        .slot-disabled {
-            opacity: 0.42;
-            pointer-events: none;
+        .slot-red-hint {
+            border-color: #DC2626 !important;
+            background-color: #FEF2F2 !important;
+            border-width: 5px !important;
+        }
+        .slot-yellow-hint {
+            border-color: #EAB308 !important;
+            background-color: #FEF9C3 !important;
+            border-width: 5px !important;
         }
 
-        /* 第 4、5 關紙本同款「色彩視覺提示（Color Coding）」算式框 */
-        .slot-cue-blue {
-            border-color: #2563eb !important;
-            border-width: 5px !important;
-            background-color: #eff6ff !important;
-            box-shadow: 0 4px 0 #93c5fd;
-        }
-        .slot-cue-red {
-            border-color: #ef4444 !important;
-            border-width: 5px !important;
-            background-color: #fef2f2 !important;
-            box-shadow: 0 4px 0 #fca5a5;
-        }
-        .slot-cue-yellow {
-            border-color: #eab308 !important;
-            border-width: 5px !important;
-            background-color: #fef9c3 !important;
-            box-shadow: 0 4px 0 #fde047;
-        }
-
-        /* 第 4、5 關「剩下物品」柔和黃色光暈標示（對應黃色解答格） */
-        .remain-yellow-highlight {
-            background-color: #fef08a !important;
-            border: 3px solid #eab308 !important;
-            border-radius: 1rem;
-            box-shadow: 0 3px 0 #eab308, 0 0 12px rgba(250, 204, 21, 0.65) !important;
-            transition: all 0.3s ease;
-        }
-
-        /* 第 3、4、5 關獨立物品卡片（防止互疊與壓到藍色外框邊界） */
+        /* 第 4、5 關：獨立圓角卡片＋寬敞間距，防止圖示與紅叉叉/藍框重疊 */
         .stage-item-card {
-            position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            padding: 6px;
             border-radius: 1rem;
-            padding: clamp(5px, 1.3vw, 10px);
-            background-color: #ffffff;
-            border: 2px solid #e2e8f0;
-            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
-            line-height: 1;
-            flex-shrink: 0;
+            background-color: #FFFFFF;
+            border: 3px solid #E2E8F0;
+            box-shadow: 0 3px 6px rgba(15, 23, 42, 0.06);
+            transition: transform 0.2s, background-color 0.25s, border-color 0.25s;
         }
-        .stage-item-card.crossed-card {
-            background-color: #fff1f2;
-            border-color: #fecdd3;
+        .stage-item-clickable {
+            cursor: pointer;
+        }
+        .stage-item-clickable:hover {
+            transform: scale(1.06);
+            border-color: #F87171;
+        }
+        .stage-item-clickable:active {
+            transform: scale(0.95);
+        }
+        .remain-yellow-highlight {
+            background-color: #FEF08A !important;
+            border: 3.5px solid #EAB308 !important;
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.45), 0 4px 8px rgba(161, 98, 7, 0.18) !important;
+            transform: scale(1.04);
+        }
+        .crossed-red-card {
+            background-color: #FEF2F2 !important;
+            border: 3px solid #FCA5A5 !important;
         }
 
-        @keyframes pulseFocus {
+        @keyframes pulse-focus {
             0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
-            50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(249, 115, 22, 0.4); }
+            50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(249, 115, 22, 0.35); }
         }
         .slot-focused {
-            border-color: #f97316 !important;
-            animation: pulseFocus 1s infinite;
-            z-index: 15;
+            border-color: #F97316 !important;
+            animation: pulse-focus 1s infinite;
+            z-index: 10;
         }
 
-        @keyframes shakeError {
+        @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-8px); }
             75% { transform: translateX(8px); }
         }
         .animate-shake {
-            animation: shakeError 0.3s ease-in-out;
-            border-color: #ef4444 !important;
-            background-color: #fee2e2 !important;
+            animation: shake 0.3s ease-in-out;
+            border-color: #EF4444 !important;
+            background-color: #FEE2E2 !important;
         }
 
-        /* 物品與移動動畫 */
-        @keyframes popIn {
-            0% { transform: scale(0); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .emoji-pop {
-            animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-        }
-
-        @keyframes dropDownGreen {
-            0% { transform: translateY(-28px) scale(0.7); opacity: 0.5; }
-            100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        .drop-into-green {
-            animation: dropDownGreen 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-
-        @keyframes flyUpBlue {
-            0% { transform: translateY(32px) scale(0.7); opacity: 0.5; }
-            100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
-        .fly-into-blue {
-            animation: flyUpBlue 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-
-        /* 超大紅叉叉樣式（比物品本身還大，且完整收在獨立卡片內不壓外框） */
-        .item-wrapper {
+        /* ==================== 三色操作板積木樣式 ==================== */
+        .board-block {
+            border-radius: 8px;
+            box-shadow: inset -2px -2px 5px rgba(0, 0, 0, 0.16), 2px 3px 5px rgba(0, 0, 0, 0.22);
             position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            line-height: 1;
+            transition: transform 0.15s, box-shadow 0.15s;
+            flex-shrink: 0;
         }
-        .big-red-cross {
+        .board-block::before {
+            content: '';
             position: absolute;
-            inset: 4%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-            z-index: 10;
+            top: -16%;
+            left: 22%;
+            width: 56%;
+            height: 16%;
+            border-radius: 3px 3px 0 0;
+            background: inherit;
+            border: inherit;
+            border-bottom: none;
         }
-        .big-red-cross svg {
-            width: 100%;
-            height: 100%;
-            filter: drop-shadow(0 2px 3px rgba(255, 255, 255, 0.95));
+        .block-yellow {
+            background-color: #FACC15;
+            border: 2px solid #CA8A04;
+        }
+        .block-movable {
+            cursor: pointer;
+            animation: pulseBlock 1.2s infinite;
+        }
+        .block-movable:active {
+            transform: scale(0.9);
+        }
+        @keyframes pulseBlock {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6), inset -2px -2px 5px rgba(0, 0, 0, 0.16); }
+            50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0), inset -2px -2px 5px rgba(0, 0, 0, 0.16); }
+        }
+
+        .emoji-pop {
+            animation: popIn 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
         @keyframes stampCross {
             0% { transform: scale(2.4) rotate(-18deg); opacity: 0; }
@@ -318,20 +303,6 @@
         }
         .cross-animate {
             animation: stampCross 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-
-        /* 呼吸提示框（引導第 1 關先點黃區、再點綠區：鮮明紅色閃爍外框） */
-        @keyframes zoneGuidePulse {
-            0%, 100% {
-                box-shadow: inset 0 0 0 5px rgba(239, 68, 68, 0.7), 0 0 0 3px rgba(239, 68, 68, 0.55);
-            }
-            50% {
-                box-shadow: inset 0 0 0 9px rgba(220, 38, 38, 1), 0 0 18px 6px rgba(239, 68, 68, 0.85);
-            }
-        }
-        .active-zone-guide {
-            animation: zoneGuidePulse 1s infinite;
-            z-index: 5;
         }
 
         /* ==================== 第 6 關：高擬真 SVG 手掌模擬器樣式 ==================== */
@@ -347,174 +318,141 @@
 <body>
 
     <!-- ==================== Screen 1: 角色選擇 ==================== -->
-    <div id="screen-char" class="screen active justify-center items-center p-4 bg-white/80 backdrop-blur-sm">
-        <div class="bg-white/95 rounded-[2.5rem] border-8 border-sky-300 shadow-2xl p-6 sm:p-10 max-w-2xl w-full text-center">
-            <div class="inline-block bg-amber-300 text-amber-900 font-black px-5 py-1.5 rounded-full text-sm sm:text-base mb-3 shadow-sm">
-                🎢 減法遊樂園大冒險 3.3
-            </div>
-            <h1 class="text-3xl sm:text-5xl font-black text-sky-700 mb-8 tracking-wide">選一個小幫手出發！</h1>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 justify-items-center">
-                <button onclick="selectChar('🦊')" class="char-card">
-                    <span class="text-5xl sm:text-6xl mb-1">🦊</span>
-                    <span class="text-base sm:text-lg font-black text-slate-700">小狐狸</span>
-                </button>
-                <button onclick="selectChar('🐻')" class="char-card">
-                    <span class="text-5xl sm:text-6xl mb-1">🐻</span>
-                    <span class="text-base sm:text-lg font-black text-slate-700">小棕熊</span>
-                </button>
-                <button onclick="selectChar('🐰')" class="char-card">
-                    <span class="text-5xl sm:text-6xl mb-1">🐰</span>
-                    <span class="text-base sm:text-lg font-black text-slate-700">小白兔</span>
-                </button>
-                <button onclick="selectChar('🐶')" class="char-card">
-                    <span class="text-5xl sm:text-6xl mb-1">🐶</span>
-                    <span class="text-base sm:text-lg font-black text-slate-700">小黃狗</span>
-                </button>
-            </div>
+    <div id="screen-char" class="screen active absolute inset-0 z-[60] bg-white/95 backdrop-blur-md justify-center items-center p-4">
+        <div class="bg-sky-50 border-4 border-sky-300 rounded-3xl px-6 py-4 mb-8 shadow-sm">
+            <h1 class="text-2xl sm:text-4xl font-black text-sky-800 text-center">🎡 減法遊樂園大冒險</h1>
+            <p class="text-base sm:text-xl font-bold text-sky-600 text-center mt-1">選一個好朋友，一起去闖關吧！</p>
+        </div>
+        <div class="flex flex-wrap justify-center gap-5 sm:gap-8 max-w-2xl">
+            <button onclick="selectChar('🦊', '小狐狸')" class="char-card">
+                <span class="text-5xl sm:text-6xl">🦊</span>
+                <span class="text-sm sm:text-base font-black text-sky-800 mt-1">小狐狸</span>
+            </button>
+            <button onclick="selectChar('🐻', '小熊熊')" class="char-card">
+                <span class="text-5xl sm:text-6xl">🐻</span>
+                <span class="text-sm sm:text-base font-black text-sky-800 mt-1">小熊熊</span>
+            </button>
+            <button onclick="selectChar('🐰', '小兔兔')" class="char-card">
+                <span class="text-5xl sm:text-6xl">🐰</span>
+                <span class="text-sm sm:text-base font-black text-sky-800 mt-1">小兔兔</span>
+            </button>
+            <button onclick="selectChar('🐶', '小狗狗')" class="char-card">
+                <span class="text-5xl sm:text-6xl">🐶</span>
+                <span class="text-sm sm:text-base font-black text-sky-800 mt-1">小狗狗</span>
+            </button>
         </div>
     </div>
 
-    <!-- ==================== Screen 2: 七關闖關地圖 ==================== -->
-    <div id="screen-map" class="screen p-2.5 sm:p-4 bg-white/40 backdrop-blur-sm">
-        <!-- 頂部範圍與題數狀態提示 -->
-        <div class="w-full max-w-2xl mx-auto flex justify-start sm:justify-center mb-1.5 z-40 shrink-0 pr-24 sm:pr-0">
-            <span id="map-range-badge" class="bg-white/95 text-sky-900 border-2 border-sky-300 font-black px-3 py-1 rounded-full text-xs sm:text-sm shadow-sm">
-                全部上限：10 ｜ 拿走上限：10 ｜ 每關 5 題
-            </span>
-        </div>
-
-        <!-- 右上角老師功能列：學習紀錄 📊 + 參數設定 ⚙️ -->
-        <div class="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-50 flex items-center gap-2">
-            <button onclick="openRecords()" title="學生答題紀錄" class="bg-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-lg border-4 border-emerald-300 text-xs sm:text-base font-black text-emerald-800 flex items-center gap-1 active:scale-95 transition-transform">
-                <span>📊</span><span class="hidden sm:inline">學習紀錄</span>
+    <!-- ==================== Screen 2: 冒險地圖（7 關連貫路線） ==================== -->
+    <div id="screen-map" class="screen absolute inset-0 z-50 p-3 sm:p-6 bg-sky-100/80 backdrop-blur-sm">
+        <div class="flex items-center justify-between mb-2 shrink-0">
+            <button onclick="openRecords()" class="bg-white/95 hover:bg-white px-3 py-2 rounded-2xl shadow border-2 border-sky-300 text-sm sm:text-base font-black text-sky-800 active:scale-95 flex items-center gap-1">
+                <span>📊</span><span>學習紀錄</span>
             </button>
-            <button onclick="openSettings()" title="老師後台設定" class="bg-white p-1.5 sm:p-2 rounded-full shadow-lg border-4 border-sky-300 text-lg sm:text-2xl active:scale-95 transition-transform">
+            <h1 class="text-xl sm:text-3xl font-black text-center text-sky-900 drop-shadow-sm">🎢 減法遊樂園地圖</h1>
+            <button onclick="openSettings()" class="bg-white/95 hover:bg-white p-2 sm:px-3 sm:py-2 rounded-2xl shadow border-2 border-sky-300 text-lg sm:text-xl font-black text-slate-700 active:scale-95" title="老師設定">
                 ⚙️
             </button>
         </div>
 
-        <div class="flex-1 map-bg max-w-2xl w-full mx-auto flex flex-col justify-between items-center py-3 sm:py-5 px-3">
+        <div class="flex-1 map-bg flex flex-col justify-between items-center py-4 sm:py-6 relative">
             <div class="map-path"></div>
 
             <!-- 第 7 關：純手指心算終極挑戰 -->
-            <div class="flex items-center gap-2.5 z-10" style="margin-left: 48px;">
-                <button id="node-7" onclick="startLevel(7)" class="map-node node-locked">
-                    <span class="text-base sm:text-xl">7</span>
-                </button>
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-rose-700 shadow border-2 border-rose-300">🧠 純手指心算終極挑戰</span>
+            <div class="flex items-center gap-3 z-10" style="margin-left: 72px;">
+                <button id="node-7" onclick="startLevel(7)" class="map-node node-locked">7</button>
+                <span class="bg-white/90 px-3 py-1 rounded-xl text-xs sm:text-sm font-black text-slate-700 shadow-sm">🧠 純手指心算</span>
             </div>
 
-            <!-- 第 6 關：互動手指模擬器 -->
-            <div class="flex items-center gap-2.5 z-10" style="margin-right: 48px;">
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-amber-800 shadow border-2 border-amber-300">🖐️ 手指頭小幫手（動畫＋互動）</span>
-                <button id="node-6" onclick="startLevel(6)" class="map-node node-locked">
-                    <span class="text-base sm:text-xl">6</span>
-                </button>
+            <!-- 第 6 關：高擬真雙手折手指模擬器 -->
+            <div class="flex items-center gap-3 z-10" style="margin-right: 72px;">
+                <span class="bg-white/90 px-3 py-1 rounded-xl text-xs sm:text-sm font-black text-slate-700 shadow-sm">🖐️ 手指頭小幫手</span>
+                <button id="node-6" onclick="startLevel(6)" class="map-node node-locked">6</button>
             </div>
 
-            <!-- 第 5 關 -->
-            <div class="flex items-center gap-2.5 z-10" style="margin-left: 48px;">
-                <button id="node-5" onclick="startLevel(5)" class="map-node node-locked">
-                    <span class="text-base sm:text-xl">5</span>
-                </button>
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-slate-700 shadow border-2 border-sky-200">🍽️ 遇見 0＋互動畫叉綜合</span>
+            <!-- 第 5 關：遇見 0＋句型畫叉綜合 -->
+            <div class="flex items-center gap-3 z-10" style="margin-left: 72px;">
+                <button id="node-5" onclick="startLevel(5)" class="map-node node-locked">5</button>
+                <span class="bg-white/90 px-3 py-1 rounded-xl text-xs sm:text-sm font-black text-slate-700 shadow-sm">🍽️ 遇見0＋畫叉綜合</span>
             </div>
 
-            <!-- 第 4 關 -->
-            <div class="flex items-center gap-2.5 z-10" style="margin-right: 48px;">
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-slate-700 shadow border-2 border-sky-200">✏️ 聽題目自己畫叉叉</span>
-                <button id="node-4" onclick="startLevel(4)" class="map-node node-locked">
-                    <span class="text-base sm:text-xl">4</span>
-                </button>
+            <!-- 第 4 關：聽句型自己畫叉叉（一般減法＋色彩提示） -->
+            <div class="flex items-center gap-3 z-10" style="margin-right: 72px;">
+                <span class="bg-white/90 px-3 py-1 rounded-xl text-xs sm:text-sm font-black text-slate-700 shadow-sm">✏️ 聽句型畫叉叉</span>
+                <button id="node-4" onclick="startLevel(4)" class="map-node node-locked">4</button>
             </div>
 
-            <!-- 第 3 關 -->
-            <div class="flex items-center gap-2.5 z-10" style="margin-left: 48px;">
-                <button id="node-3" onclick="startLevel(3)" class="map-node node-locked">
-                    <span class="text-base sm:text-xl">3</span>
-                </button>
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-slate-700 shadow border-2 border-sky-200">❌ 紅叉叉動畫＋列式</span>
+            <!-- 第 3 關：紅叉叉動畫＋列式 -->
+            <div class="flex items-center gap-3 z-10" style="margin-left: 72px;">
+                <button id="node-3" onclick="startLevel(3)" class="map-node node-locked">3</button>
+                <span class="bg-white/90 px-3 py-1 rounded-xl text-xs sm:text-sm font-black text-slate-700 shadow-sm">❌ 紅叉叉動畫</span>
             </div>
 
-            <!-- 第 2 關 -->
-            <div class="flex items-center gap-2.5 z-10" style="margin-right: 48px;">
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-slate-700 shadow border-2 border-sky-200">🚀 操作板動畫＋列式</span>
-                <button id="node-2" onclick="startLevel(2)" class="map-node node-locked">
-                    <span class="text-base sm:text-xl">2</span>
-                </button>
+            <!-- 第 2 關：操作板動畫＋列式 -->
+            <div class="flex items-center gap-3 z-10" style="margin-right: 72px;">
+                <span class="bg-white/90 px-3 py-1 rounded-xl text-xs sm:text-sm font-black text-slate-700 shadow-sm">🚀 操作板動畫</span>
+                <button id="node-2" onclick="startLevel(2)" class="map-node node-locked">2</button>
             </div>
 
-            <!-- 第 1 關 -->
-            <div class="flex items-center gap-2.5 z-10" style="margin-left: 48px;">
+            <!-- 第 1 關：動手拿積木操作板 -->
+            <div class="flex items-center gap-3 z-10" style="margin-left: 72px;">
                 <button id="node-1" onclick="startLevel(1)" class="map-node node-unlocked">
-                    <span class="text-base sm:text-xl">1</span>
-                    <div id="avatar-pin" class="avatar-pin">🦊</div>
+                    1<div id="avatar" class="avatar">🦊</div>
                 </button>
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-amber-800 shadow border-2 border-amber-300">🧱 動手拿積木操作板</span>
+                <span class="bg-white/90 px-3 py-1 rounded-xl text-xs sm:text-sm font-black text-slate-700 shadow-sm">🧱 動手拿積木</span>
             </div>
         </div>
     </div>
 
-    <!-- ==================== Screen 3: 遊戲闖關主畫面 ==================== -->
-    <div id="screen-game" class="screen">
-        <!-- 頂部狀態列 + 語音報讀按鈕 -->
-        <div class="h-[7.5vh] min-h-[50px] bg-white/95 shadow-sm flex items-center justify-between px-2.5 sm:px-5 shrink-0 z-20 border-b-4 border-sky-200">
-            <button onclick="goMap()" class="jelly-btn btn-gray text-sm sm:text-base font-black py-1 px-3">
-                🔙 地圖
-            </button>
-
-            <div class="flex items-center gap-2 overflow-hidden px-1">
-                <button onclick="speakCurrentQuestion()" title="再聽一次題目" class="jelly-btn btn-amber px-2.5 py-1 text-base sm:text-xl font-black flex items-center gap-1 shrink-0">
-                    <span>🔊</span><span class="hidden md:inline text-sm">念題目</span>
+    <!-- ==================== Screen 3: 遊戲闖關 ==================== -->
+    <div id="screen-game" class="screen bg-transparent">
+        <!-- 頂部資訊列 -->
+        <div class="h-[8dvh] min-h-[52px] bg-white/95 shadow-sm flex items-center justify-between px-3 sm:px-5 shrink-0 z-20 border-b-4 border-sky-200">
+            <button onclick="goMap()" class="jelly-btn bg-slate-200 text-slate-700 text-sm sm:text-lg font-black py-1 px-3 shadow-[0_4px_0_#94A3B8]">🔙 地圖</button>
+            <div class="flex items-center gap-2">
+                <button onclick="repeatPrompt()" class="bg-amber-100 hover:bg-amber-200 border-2 border-amber-400 text-amber-900 font-black px-2.5 py-1 rounded-xl text-xs sm:text-base active:scale-95 flex items-center gap-1" title="再聽一次題目">
+                    <span>🔊</span><span class="hidden sm:inline">念題目</span>
                 </button>
-                <h2 id="level-title" class="text-sm sm:text-xl font-black text-sky-800 truncate">第 1 關：動手拿積木</h2>
+                <h2 id="level-title" class="text-base sm:text-xl font-black text-sky-800 truncate">第 1 關</h2>
             </div>
-
-            <div id="star-progress" class="text-lg sm:text-3xl text-amber-400 tracking-wider shrink-0">☆☆☆☆☆</div>
+            <div id="star-progress" class="text-lg sm:text-2xl text-amber-400 tracking-wider drop-shadow-sm">☆☆☆☆☆</div>
         </div>
 
-        <!-- 中央舞台區（動態切換 7 種關卡視覺） -->
-        <div id="stage-wrapper" class="flex-1 flex justify-center items-center p-2 sm:p-3 overflow-hidden min-h-0">
-            <!-- 由 JS 動態渲染 -->
+        <!-- 舞台展示區 -->
+        <div id="stage-wrapper" class="flex-1 flex justify-center items-center px-3 sm:px-5 py-2 min-h-[24dvh] overflow-hidden">
+            <!-- 由 JS 依關卡動態生成三色操作板 / 彩色句型互動畫叉框 / 雙手模擬器 / 心算提示 -->
         </div>
 
-        <!-- 形狀防呆算式區（第 4、5 關附帶藍／紅／黃色彩提示標籤） -->
-        <div class="shrink-0 flex flex-col items-center justify-center py-1.5 bg-white/80 backdrop-blur-sm border-t-2 border-white">
-            <div id="slot-hint" class="text-xs sm:text-sm font-black text-orange-600 mb-1 h-5 px-2 text-center truncate max-w-full">
-                提示文字區
+        <!-- 算式輸入框與提示列 -->
+        <div class="shrink-0 flex flex-col items-center justify-center py-1 px-2 relative z-10">
+            <div id="slot-hint" class="text-xs sm:text-base font-black text-sky-900 bg-white/90 px-3 py-0.5 rounded-full mb-1 border border-sky-200 shadow-sm text-center max-w-full truncate">
+                請點選亮起來的格子
             </div>
-            <div id="slot-container" class="flex justify-center items-center gap-1.5 sm:gap-3 px-2">
-                <!-- 方形：全部（被減數） -->
+            <div id="slot-container" class="flex justify-center items-start gap-1.5 sm:gap-3">
                 <div class="flex flex-col items-center">
-                    <div id="s0" onclick="setFocus(0)" class="slot-box slot-square border-amber-400 bg-amber-50"></div>
-                    <span id="lbl-s0" class="hidden text-[10px] sm:text-xs font-black text-blue-700 mt-0.5">🔵 全部</span>
+                    <div id="s0" onclick="setFocus(0)" class="slot-box slot-square slot-blue-hint"></div>
+                    <span id="lbl-s0" class="text-[11px] sm:text-xs font-black text-blue-700 mt-0.5">🔵 全部</span>
                 </div>
-                <!-- 圓形：減號 -->
-                <div class="flex flex-col items-center">
+                <div class="flex flex-col items-center justify-center pt-1.5 sm:pt-2">
                     <div id="s1" onclick="setFocus(1)" class="slot-box slot-circle border-pink-400 bg-pink-50"></div>
-                    <span id="lbl-s1" class="hidden text-[10px] sm:text-xs font-black text-transparent mt-0.5 select-none">減</span>
                 </div>
-                <!-- 方形：拿走（減數） -->
                 <div class="flex flex-col items-center">
-                    <div id="s2" onclick="setFocus(2)" class="slot-box slot-square border-sky-400 bg-sky-50"></div>
-                    <span id="lbl-s2" class="hidden text-[10px] sm:text-xs font-black text-red-600 mt-0.5">❌ 拿走</span>
+                    <div id="s2" onclick="setFocus(2)" class="slot-box slot-square slot-red-hint"></div>
+                    <span id="lbl-s2" class="text-[11px] sm:text-xs font-black text-red-600 mt-0.5">❌ 拿走</span>
                 </div>
-                <!-- 圓形：等號 -->
-                <div class="flex flex-col items-center">
-                    <div id="s3" onclick="setFocus(3)" class="slot-box slot-circle border-indigo-400 bg-indigo-50"></div>
-                    <span id="lbl-s3" class="hidden text-[10px] sm:text-xs font-black text-transparent mt-0.5 select-none">等</span>
+                <div class="flex flex-col items-center justify-center pt-1.5 sm:pt-2">
+                    <div id="s3" onclick="setFocus(3)" class="slot-box slot-circle border-sky-400 bg-sky-50"></div>
                 </div>
-                <!-- 方形：剩下（差） -->
                 <div class="flex flex-col items-center">
-                    <div id="s4" onclick="setFocus(4)" class="slot-box slot-square border-emerald-500 bg-emerald-50"></div>
-                    <span id="lbl-s4" class="hidden text-[10px] sm:text-xs font-black text-amber-700 mt-0.5">🟡 剩下</span>
+                    <div id="s4" onclick="setFocus(4)" class="slot-box slot-square slot-yellow-hint"></div>
+                    <span id="lbl-s4" class="text-[11px] sm:text-xs font-black text-amber-600 mt-0.5">🟡 剩下</span>
                 </div>
             </div>
         </div>
 
-        <!-- 底部 3D 果凍數字鍵盤（強制 4 排防止 iPad/Android 裁切） -->
-        <div class="h-[36vh] min-h-[200px] bg-white/90 backdrop-blur-md p-2 sm:p-3.5 pb-5 sm:pb-7 border-t-4 border-sky-200 shadow-xl relative shrink-0">
-            <div class="grid grid-cols-4 grid-rows-4 gap-2 sm:gap-2.5 h-full w-full max-w-2xl mx-auto">
+        <!-- 數字鍵盤區 -->
+        <div class="h-[36dvh] min-h-[205px] bg-white/85 backdrop-blur-md p-2.5 sm:p-4 pb-4 sm:pb-6 border-t-4 border-white shadow-xl relative shrink-0">
+            <div class="grid grid-cols-4 grid-rows-4 gap-2 sm:gap-3 h-full w-full max-w-3xl mx-auto">
                 <button onclick="inputKey('1')" class="jelly-btn btn-white text-2xl sm:text-4xl font-black flex justify-center items-center">1</button>
                 <button onclick="inputKey('2')" class="jelly-btn btn-white text-2xl sm:text-4xl font-black flex justify-center items-center">2</button>
                 <button onclick="inputKey('3')" class="jelly-btn btn-white text-2xl sm:text-4xl font-black flex justify-center items-center">3</button>
@@ -537,106 +475,102 @@
                 </div>
             </div>
 
-            <!-- 單題過關遮罩 -->
-            <div id="overlay-next" class="absolute inset-0 bg-white/90 backdrop-blur-sm hidden flex-col justify-center items-center z-30">
-                <div class="text-2xl sm:text-4xl font-black text-emerald-600 mb-3 animate-bounce">🎉 答對了！太棒了！</div>
-                <button onclick="nextQ()" class="jelly-btn bg-amber-400 text-amber-950 text-2xl sm:text-4xl font-black py-3 px-10 shadow-[0_6px_0_#b45309] border-4 border-amber-200">
+            <!-- 單題成功遮罩 -->
+            <div id="overlay-next" class="absolute inset-0 bg-white/90 backdrop-blur-sm hidden flex-col justify-center items-center z-30 rounded-t-3xl p-4">
+                <div id="success-equation-banner" class="text-2xl sm:text-4xl font-black text-emerald-700 bg-emerald-100 border-4 border-emerald-400 px-6 py-2 rounded-2xl mb-4 shadow-sm">
+                    8 - 3 = 5
+                </div>
+                <button onclick="nextQ()" class="jelly-btn bg-amber-400 text-white text-2xl sm:text-4xl font-black py-3 px-10 shadow-[0_7px_0_#B45309] border-4 border-amber-200">
                     下一題 ➔
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ==================== 關卡全破：溝通訓練畫面（「老師！我完成了！」） ==================== -->
-    <div id="modal-clear" class="fixed inset-0 bg-gradient-to-b from-amber-300 via-yellow-200 to-sky-200 z-[70] hidden flex-col justify-center items-center p-4">
-        <div class="bg-white/95 rounded-[2.5rem] border-8 border-amber-400 shadow-2xl p-6 sm:p-10 max-w-lg w-full text-center flex flex-col items-center">
-            <span id="clear-modal-subtitle" class="bg-emerald-100 text-emerald-800 font-black px-4 py-1 rounded-full text-sm sm:text-base mb-3 border-2 border-emerald-300">
-                ⭐ 收集滿 5 顆星星囉！請舉手跟老師說：
-            </span>
+    <!-- ==================== 關卡全破畫面（附圖同款舉手溝通提示＋語音跟著念） ==================== -->
+    <div id="modal-clear" class="fixed inset-0 bg-amber-300/95 z-[70] hidden flex-col justify-center items-center p-4 sm:p-6 text-center backdrop-blur-sm">
+        <div class="bg-[#FFFDF5] rounded-[2.2rem] p-5 sm:p-8 max-w-md w-full shadow-2xl border-[6px] border-amber-400 flex flex-col items-center">
+            <!-- 頂部淺綠收集星星膠囊 -->
+            <div class="bg-emerald-50 border-2 border-emerald-400 text-emerald-900 font-black px-4 py-1.5 rounded-full text-sm sm:text-base mb-5 shadow-sm">
+                ⭐ 收集滿 <span id="clear-star-num">5</span> 顆星星囉！請舉手跟老師說：
+            </div>
 
-            <!-- 學生舉手插畫 SVG -->
-            <div class="w-40 h-40 sm:w-48 sm:h-48 my-2 relative flex items-center justify-center">
-                <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-md">
-                    <circle cx="100" cy="105" r="82" fill="#FEF3C7" />
-                    <path d="M132 125 Q155 75 148 32" stroke="#FDBA74" stroke-width="20" stroke-linecap="round" fill="none" />
-                    <circle cx="148" cy="28" r="13" fill="#FDBA74" />
-                    <text x="162" y="42" font-size="24">✨</text>
-                    <path d="M55 185 C55 140, 145 140, 145 185 Z" fill="#38BDF8" />
-                    <path d="M68 135 Q48 158 52 178" stroke="#FDBA74" stroke-width="18" stroke-linecap="round" fill="none" />
-                    <circle cx="100" cy="95" r="42" fill="#FED7AA" />
-                    <path d="M58 92 C58 48, 142 48, 142 92 C132 68, 68 68, 58 92 Z" fill="#1E293B" />
-                    <path d="M80 92 Q86 84 92 92" stroke="#1E293B" stroke-width="4" stroke-linecap="round" fill="none" />
-                    <path d="M108 92 Q114 84 120 92" stroke="#1E293B" stroke-width="4" stroke-linecap="round" fill="none" />
-                    <circle cx="75" cy="104" r="6" fill="#FDA4AF" opacity="0.75" />
-                    <circle cx="125" cy="104" r="6" fill="#FDA4AF" opacity="0.75" />
-                    <path d="M86 110 Q100 128 114 110 Z" fill="#EF4444" />
+            <!-- 附圖同款高舉右手可愛人物向量插畫 -->
+            <div class="mb-4">
+                <svg viewBox="0 0 180 180" class="w-36 h-36 sm:w-44 sm:h-44 overflow-visible">
+                    <!-- 淺黃色圓形光暈底 -->
+                    <circle cx="90" cy="94" r="66" fill="#FEF3C7" />
+                    <!-- 藍色上衣身體 -->
+                    <path d="M52 152 C52 126, 128 126, 128 152 Z" fill="#38BDF8" />
+                    <!-- 彎曲左手臂 -->
+                    <path d="M56 146 Q42 132 54 114" fill="none" stroke="#FDBA74" stroke-width="15" stroke-linecap="round" />
+                    <!-- 高舉的右手臂 -->
+                    <path d="M108 118 Q126 98 124 44" fill="none" stroke="#FDBA74" stroke-width="16" stroke-linecap="round" />
+                    <!-- 右手小拳頭 -->
+                    <circle cx="124" cy="38" r="12" fill="#FDBA74" />
+                    <!-- 閃亮星星裝飾 -->
+                    <path d="M144 36 L147 43 L154 46 L147 49 L144 56 L141 49 L134 46 L141 43 Z" fill="#F59E0B" />
+                    <path d="M156 26 L157.5 30 L161.5 31.5 L157.5 33 L156 37 L154.5 33 L150.5 31.5 L154.5 30 Z" fill="#F59E0B" />
+                    <!-- 圓圓臉蛋 -->
+                    <circle cx="88" cy="86" r="32" fill="#FED7AA" />
+                    <!-- 黑色瀏海頭髮 -->
+                    <path d="M56 84 C56 54, 120 54, 120 84 C108 72, 68 72, 56 84 Z" fill="#1E293B" />
+                    <!-- 彎彎笑眼 -->
+                    <path d="M71 84 Q76 78 81 84" fill="none" stroke="#1E293B" stroke-width="3.5" stroke-linecap="round" />
+                    <path d="M95 84 Q100 78 105 84" fill="none" stroke="#1E293B" stroke-width="3.5" stroke-linecap="round" />
+                    <!-- 粉紅腮紅 -->
+                    <circle cx="67" cy="93" r="5" fill="#FDA4AF" opacity="0.7" />
+                    <circle cx="109" cy="93" r="5" fill="#FDA4AF" opacity="0.7" />
+                    <!-- 開心大笑嘴巴 -->
+                    <path d="M78 96 Q88 110 98 96 Z" fill="#EF4444" />
                 </svg>
             </div>
 
-            <h1 class="text-3xl sm:text-5xl font-black text-rose-600 mb-4 tracking-wide drop-shadow-sm">
+            <!-- 醒目大紅字溝通句型 -->
+            <h1 class="text-3xl sm:text-5xl font-black text-rose-600 leading-tight mb-5 tracking-wide">
                 「老師！我完成了！」
             </h1>
 
-            <button onclick="speakFinishPhrase()" class="jelly-btn btn-amber text-lg sm:text-2xl font-black py-2.5 px-6 mb-6 flex items-center gap-2">
-                <span>🔊</span><span>再聽一次（跟著念）</span>
+            <!-- 黃色再聽一次（跟著念）按鈕 -->
+            <button onclick="speak('老師！我完成了！')" class="jelly-btn bg-amber-200 hover:bg-amber-300 text-slate-800 text-lg sm:text-xl font-black py-2.5 px-7 mb-5 shadow-[0_5px_0_#D97706] border-2 border-amber-400 flex items-center justify-center gap-2">
+                <span>🔊</span>
+                <span>再聽一次（跟著念）</span>
             </button>
 
-            <button onclick="finishLevel()" class="jelly-btn btn-green w-full text-2xl sm:text-3xl font-black py-4 px-8">
+            <!-- 薄荷綠回到地圖前進按鈕 -->
+            <button onclick="finishLevel()" class="jelly-btn w-full bg-emerald-200 hover:bg-emerald-300 text-emerald-950 text-2xl sm:text-3xl font-black py-3.5 px-8 shadow-[0_6px_0_#16A34A] border-2 border-emerald-400">
                 回到地圖前進 ➔
             </button>
         </div>
     </div>
 
-    <!-- ==================== 老師後台設定 Modal ==================== -->
+    <!-- ==================== 老師專用設定 Modal ==================== -->
     <div id="modal-settings" class="fixed inset-0 bg-black/60 z-[80] hidden flex-col justify-center items-center backdrop-blur-sm p-4">
-        <div class="bg-white p-5 sm:p-7 rounded-3xl w-full max-w-md border-4 border-sky-300 shadow-2xl max-h-[92dvh] overflow-y-auto">
-            <h2 class="text-2xl font-black text-center mb-5 text-slate-800 border-b-2 pb-3">⚙️ 老師專用後台設定</h2>
-
-            <div class="space-y-4">
-                <!-- 被減數（全部數量）上限設定 -->
-                <div class="bg-amber-50 p-4 rounded-2xl border-2 border-amber-300">
-                    <div class="flex items-center justify-between mb-2">
-                        <div>
-                            <label class="text-base sm:text-lg font-black text-amber-950 block">被減數範圍（全部上限）</label>
-                            <span class="text-xs font-bold text-amber-700">可設定 5 ～ 50（支援超過 30）</span>
-                        </div>
-                        <input type="number" id="setting-max-minuend" min="5" max="50" value="10"
-                               class="w-24 text-2xl text-center border-2 border-amber-500 rounded-xl p-1.5 font-black bg-white text-amber-950">
-                    </div>
-                    <div class="flex gap-1.5 justify-end">
-                        <button type="button" onclick="setPresetMinuend(5)" class="px-2.5 py-1 bg-white border border-amber-400 rounded-lg text-xs font-black text-amber-900">5</button>
-                        <button type="button" onclick="setPresetMinuend(10)" class="px-2.5 py-1 bg-white border border-amber-400 rounded-lg text-xs font-black text-amber-900">10</button>
-                        <button type="button" onclick="setPresetMinuend(20)" class="px-2.5 py-1 bg-white border border-amber-400 rounded-lg text-xs font-black text-amber-900">20</button>
-                        <button type="button" onclick="setPresetMinuend(30)" class="px-2.5 py-1 bg-white border border-amber-400 rounded-lg text-xs font-black text-amber-900">30</button>
-                        <button type="button" onclick="setPresetMinuend(50)" class="px-2.5 py-1 bg-white border border-amber-400 rounded-lg text-xs font-black text-amber-900">50</button>
-                    </div>
-                </div>
-
-                <!-- 減數（拿走數量）上限設定 -->
-                <div class="bg-sky-50 p-4 rounded-2xl border-2 border-sky-300">
-                    <div class="flex items-center justify-between mb-2">
-                        <div>
-                            <label class="text-base sm:text-lg font-black text-sky-950 block">減數範圍（拿走上限）</label>
-                            <span class="text-xs font-bold text-sky-700">可單獨限制每次最多拿走幾個</span>
-                        </div>
-                        <input type="number" id="setting-max-subtrahend" min="1" max="50" value="10"
-                               class="w-24 text-2xl text-center border-2 border-sky-500 rounded-xl p-1.5 font-black bg-white text-sky-950">
-                    </div>
-                    <div class="flex gap-1.5 justify-end">
-                        <button type="button" onclick="setPresetSubtrahend(5)" class="px-2.5 py-1 bg-white border border-sky-400 rounded-lg text-xs font-black text-sky-900">5</button>
-                        <button type="button" onclick="setPresetSubtrahend(10)" class="px-2.5 py-1 bg-white border border-sky-400 rounded-lg text-xs font-black text-sky-900">10</button>
-                        <button type="button" onclick="setPresetSubtrahend(20)" class="px-2.5 py-1 bg-white border border-sky-400 rounded-lg text-xs font-black text-sky-900">20</button>
-                        <button type="button" onclick="setPresetSubtrahend(30)" class="px-2.5 py-1 bg-white border border-sky-400 rounded-lg text-xs font-black text-sky-900">30</button>
-                    </div>
-                </div>
-
-                <!-- 解鎖起始關卡 -->
-                <div class="flex items-center justify-between bg-purple-50 p-4 rounded-2xl border-2 border-purple-200">
+        <div class="bg-white p-6 sm:p-7 rounded-3xl w-full max-w-md border-4 border-sky-300 shadow-2xl max-h-[90dvh] overflow-y-auto">
+            <h2 class="text-2xl font-black text-center mb-5 text-slate-800 border-b-2 pb-3">⚙️ 老師專用設定</h2>
+            <div class="space-y-3.5">
+                <div class="flex items-center justify-between bg-purple-50 p-3.5 rounded-2xl border-2 border-purple-200">
                     <div>
-                        <label class="text-base sm:text-lg font-black text-purple-950 block">解鎖起始關卡</label>
-                        <span class="text-xs font-bold text-purple-700">可直接跳級練習指定關卡（1～7 關）</span>
+                        <label class="text-lg font-black text-purple-900 block">最大被減數（全部最多）</label>
+                        <span class="text-xs text-purple-600 font-bold">建議先從 10 以內開始建立穩定度</span>
                     </div>
-                    <select id="setting-level" class="w-28 text-lg text-center border-2 border-purple-400 rounded-xl p-2 font-black bg-white text-purple-950">
+                    <input type="number" id="setting-max" min="5" max="20" class="w-20 text-2xl text-center border-2 border-purple-400 rounded-xl p-1.5 font-black bg-white" value="10">
+                </div>
+
+                <div class="flex items-center justify-between bg-sky-50 p-3.5 rounded-2xl border-2 border-sky-200">
+                    <div>
+                        <label class="text-lg font-black text-sky-900 block">每關題數（完成幾題過關）</label>
+                        <span class="text-xs text-sky-700 font-bold">預設 5 題，可依專注度彈性調整</span>
+                    </div>
+                    <input type="number" id="setting-qcount" min="1" max="10" class="w-20 text-2xl text-center border-2 border-sky-400 rounded-xl p-1.5 font-black bg-white" value="5">
+                </div>
+
+                <div class="flex items-center justify-between bg-amber-50 p-3.5 rounded-2xl border-2 border-amber-200">
+                    <div>
+                        <label class="text-lg font-black text-amber-900 block">解鎖起始關卡</label>
+                        <span class="text-xs text-amber-700 font-bold">可直接跳至指定關卡練習</span>
+                    </div>
+                    <select id="setting-level" class="w-24 text-xl text-center border-2 border-amber-400 rounded-xl p-2 font-black bg-white">
                         <option value="1">第 1 關</option>
                         <option value="2">第 2 關</option>
                         <option value="3">第 3 關</option>
@@ -647,692 +581,633 @@
                     </select>
                 </div>
 
-                <!-- 每關題數設定 -->
-                <div class="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-300">
-                    <div class="flex items-center justify-between mb-2">
-                        <div>
-                            <label class="text-base sm:text-lg font-black text-emerald-950 block">每關題數設定</label>
-                            <span class="text-xs font-bold text-emerald-700">可自由設定每關需完成題數（1～15 題）</span>
-                        </div>
-                        <input type="number" id="setting-q-per-level" min="1" max="15" value="5"
-                               class="w-24 text-2xl text-center border-2 border-emerald-500 rounded-xl p-1.5 font-black bg-white text-emerald-950">
+                <div class="flex items-center justify-between bg-rose-50 p-3.5 rounded-2xl border-2 border-rose-200 cursor-pointer" onclick="document.getElementById('setting-lvl5-mix').click()">
+                    <div class="pr-2">
+                        <label class="text-base sm:text-lg font-black text-rose-900 block cursor-pointer">第 5 關混入一般減法（非 0 題）</label>
+                        <span class="text-xs text-rose-700 font-bold block">關閉時只出「減 0 / 剩 0」；開啟時混合一般減法綜合練習</span>
                     </div>
-                    <div class="flex gap-1.5 justify-end">
-                        <button type="button" onclick="setPresetQCount(3)" class="px-2.5 py-1 bg-white border border-emerald-400 rounded-lg text-xs font-black text-emerald-900">3 題</button>
-                        <button type="button" onclick="setPresetQCount(5)" class="px-2.5 py-1 bg-white border border-emerald-400 rounded-lg text-xs font-black text-emerald-900">5 題</button>
-                        <button type="button" onclick="setPresetQCount(8)" class="px-2.5 py-1 bg-white border border-emerald-400 rounded-lg text-xs font-black text-emerald-900">8 題</button>
-                        <button type="button" onclick="setPresetQCount(10)" class="px-2.5 py-1 bg-white border border-emerald-400 rounded-lg text-xs font-black text-emerald-900">10 題</button>
-                    </div>
+                    <input type="checkbox" id="setting-lvl5-mix" class="w-6 h-6 accent-rose-600 rounded shrink-0" onclick="event.stopPropagation()">
                 </div>
 
-                <!-- 第 5 關是否混入一般（非 0）題目 -->
-                <div class="bg-rose-50 p-4 rounded-2xl border-2 border-rose-300 flex items-center justify-between cursor-pointer"
-                     onclick="document.getElementById('setting-lvl5-mix').click()">
-                    <div>
-                        <label class="text-base sm:text-lg font-black text-rose-950 block cursor-pointer">第 5 關混入一般（非 0）題目</label>
-                        <span class="text-xs font-bold text-rose-700">關閉＝純練 0 題型（減 0 與全部減光）；開啟＝0 與一般減法混合練習</span>
+                <div class="flex items-center justify-between bg-yellow-50 p-3.5 rounded-2xl border-2 border-yellow-300 cursor-pointer" onclick="document.getElementById('setting-color-hint').click()">
+                    <div class="pr-2">
+                        <label class="text-base sm:text-lg font-black text-yellow-900 block cursor-pointer">第 4、5 關開啟藍/紅/黃色彩提示</label>
+                        <span class="text-xs text-yellow-700 font-bold block">熟練後可關閉此選項，練習褪除色彩鷹架</span>
                     </div>
-                    <input type="checkbox" id="setting-lvl5-mix" onclick="event.stopPropagation()"
-                           class="w-6 h-6 accent-rose-600 rounded cursor-pointer shrink-0">
+                    <input type="checkbox" id="setting-color-hint" class="w-6 h-6 accent-yellow-600 rounded shrink-0" checked onclick="event.stopPropagation()">
+                </div>
+
+                <div class="flex items-center justify-between bg-emerald-50 p-3.5 rounded-2xl border-2 border-emerald-200 cursor-pointer" onclick="document.getElementById('setting-voice').click()">
+                    <label class="text-lg font-black text-emerald-900 cursor-pointer">開啟語音報讀提示</label>
+                    <input type="checkbox" id="setting-voice" class="w-6 h-6 accent-emerald-600 rounded" checked onclick="event.stopPropagation()">
                 </div>
             </div>
-
             <div class="mt-6 flex gap-3">
-                <button onclick="closeSettings()" class="flex-1 bg-slate-200 text-slate-700 text-lg font-black py-3 rounded-2xl active:scale-95 transition-transform">取消</button>
-                <button onclick="applySettings()" class="flex-1 bg-sky-600 text-white text-lg font-black py-3 rounded-2xl shadow-lg active:scale-95 transition-transform">儲存套用</button>
+                <button onclick="closeSettings()" class="flex-1 bg-slate-200 text-slate-700 text-lg font-black py-3 rounded-2xl active:scale-95">取消</button>
+                <button onclick="applySettings()" class="flex-1 bg-sky-600 text-white text-lg font-black py-3 rounded-2xl shadow-lg active:scale-95">儲存套用</button>
             </div>
         </div>
     </div>
 
-    <!-- ==================== 學生學習歷程與答題分析 Modal ==================== -->
-    <div id="modal-records" class="fixed inset-0 bg-black/60 z-[85] hidden flex-col justify-center items-center backdrop-blur-sm p-3 sm:p-5">
-        <div class="bg-white p-5 sm:p-6 rounded-3xl w-full max-w-2xl border-4 border-emerald-400 shadow-2xl flex flex-col max-h-[90dvh]">
-            <div class="flex items-center justify-between border-b-2 border-slate-200 pb-3 mb-4 shrink-0">
-                <h2 class="text-xl sm:text-2xl font-black text-slate-800">📊 學生答題狀況與學習紀錄</h2>
-                <button onclick="closeRecords()" class="bg-slate-200 text-slate-700 font-black px-3 py-1 rounded-xl text-base">✖ 關閉</button>
+    <!-- ==================== 老師觀察紀錄 Modal ==================== -->
+    <div id="modal-records" class="fixed inset-0 bg-black/60 z-[80] hidden flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white p-6 rounded-3xl w-full max-w-lg border-4 border-sky-300 shadow-2xl max-h-[85dvh] flex flex-col">
+            <h2 class="text-2xl font-black text-center mb-1 text-slate-800">📊 學生闖關觀察紀錄</h2>
+            <p class="text-xs sm:text-sm text-slate-500 text-center font-bold mb-3">自動記錄每次過關表現，方便追蹤提示褪除進度</p>
+            <div id="copy-notion-toast" class="hidden bg-emerald-100 border-2 border-emerald-400 text-emerald-900 text-sm font-black text-center py-2 px-3 rounded-xl mb-3">
+                ✅ 已複製成 Notion 表格格式！直接到 Notion 按貼上（Ctrl+V / Cmd+V）即可！
             </div>
-
-            <!-- 數據摘要卡片 -->
-            <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4 shrink-0">
-                <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3 text-center">
-                    <div class="text-xs font-bold text-sky-700">累計完成題數</div>
-                    <div id="stat-total" class="text-2xl sm:text-3xl font-black text-sky-900 mt-0.5">0 題</div>
-                </div>
-                <div class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-3 text-center">
-                    <div class="text-xs font-bold text-emerald-700">一次答對率</div>
-                    <div id="stat-accuracy" class="text-2xl sm:text-3xl font-black text-emerald-900 mt-0.5">--%</div>
-                </div>
-                <div class="bg-rose-50 border-2 border-rose-200 rounded-2xl p-3 text-center">
-                    <div class="text-xs font-bold text-rose-700">需加強題目數</div>
-                    <div id="stat-errors" class="text-2xl sm:text-3xl font-black text-rose-900 mt-0.5">0 題</div>
-                </div>
-            </div>
-
-            <!-- 詳細答題紀錄列表 -->
-            <div class="flex-1 overflow-y-auto border-2 border-slate-200 rounded-2xl p-2 bg-slate-50 space-y-2 min-h-[160px]" id="records-list">
-                <!-- 由 JS 動態填入 -->
-            </div>
-
-            <!-- 底部操作按鈕：複製貼上 Notion / 清除紀錄 -->
-            <div class="mt-4 flex flex-wrap gap-2 sm:gap-3 shrink-0">
-                <button onclick="copyRecordsForNotion()" id="btn-copy-notion" class="flex-1 bg-emerald-600 text-white text-sm sm:text-base font-black py-3 px-4 rounded-2xl shadow active:scale-95 transition-transform">
-                    📋 一鍵複製紀錄（貼入 Notion）
+            <div id="records-list" class="flex-1 overflow-y-auto space-y-2.5 pr-1"></div>
+            <div class="mt-4 flex flex-wrap gap-2.5">
+                <button onclick="copyRecordsToNotion()" class="w-full bg-amber-400 hover:bg-amber-500 text-amber-950 text-lg font-black py-3 px-4 rounded-2xl shadow-md active:scale-95 flex items-center justify-center gap-2 border-2 border-amber-500">
+                    <span>📋</span><span>一鍵複製到 Notion</span>
                 </button>
-                <button onclick="requestClearRecords()" id="btn-clear-records" class="bg-rose-100 text-rose-700 border-2 border-rose-300 text-sm sm:text-base font-black py-3 px-4 rounded-2xl active:scale-95 transition-transform">
-                    🗑️ 清除紀錄
-                </button>
+                <button onclick="clearRecords()" class="bg-rose-100 text-rose-700 text-base font-black py-2.5 px-4 rounded-2xl active:scale-95">清除紀錄</button>
+                <button onclick="closeRecords()" class="flex-1 bg-sky-600 text-white text-lg font-black py-2.5 rounded-2xl shadow-lg active:scale-95">關閉</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ==================== 1. 國語語音報讀 (Web Speech API) ====================
-        function speakText(text) {
-            try {
-                if (!('speechSynthesis' in window)) return;
-                window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance(text);
-                utter.lang = 'zh-TW';
-                utter.rate = 0.92;
-                utter.pitch = 1.08;
-                window.speechSynthesis.speak(utter);
-            } catch (e) {
-                console.warn('TTS unavailable:', e);
-            }
+        // ==================== 1. 音效與語音系統 ====================
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function ensureAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        function speakCurrentQuestion() {
-            const phrase = `全部有 ${minuend} 個，拿走 ${subtrahend} 個，剩下幾個？`;
-            speakText(phrase);
-        }
-
-        function speakFinishPhrase() {
-            speakText('老師！我完成了！');
-        }
-
-        // ==================== 2. 音效系統 (Web Audio API) ====================
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSnd(type) {
             try {
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                const now = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
+                ensureAudio();
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g);
+                g.connect(audioCtx.destination);
 
                 if (type === 'click') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(580, now);
-                    osc.frequency.exponentialRampToValueAtTime(320, now + 0.08);
-                    gain.gain.setValueAtTime(0.22, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-                    osc.start(now);
-                    osc.stop(now + 0.08);
-                } else if (type === 'move') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(360, now);
-                    osc.frequency.exponentialRampToValueAtTime(740, now + 0.14);
-                    gain.gain.setValueAtTime(0.26, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
-                    osc.start(now);
-                    osc.stop(now + 0.14);
-                } else if (type === 'stamp') {
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(240, now);
-                    osc.frequency.exponentialRampToValueAtTime(110, now + 0.18);
-                    gain.gain.setValueAtTime(0.25, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
-                    osc.start(now);
-                    osc.stop(now + 0.18);
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(620, audioCtx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(320, audioCtx.currentTime + 0.09);
+                    g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.09);
+                    o.start();
+                    o.stop(audioCtx.currentTime + 0.09);
+                } else if (type === 'pop') {
+                    o.type = 'triangle';
+                    o.frequency.setValueAtTime(420, audioCtx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(760, audioCtx.currentTime + 0.12);
+                    g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+                    o.start();
+                    o.stop(audioCtx.currentTime + 0.12);
                 } else if (type === 'err') {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(155, now);
-                    gain.gain.setValueAtTime(0.22, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
-                    osc.start(now);
-                    osc.stop(now + 0.25);
+                    o.type = 'sawtooth';
+                    o.frequency.setValueAtTime(160, audioCtx.currentTime);
+                    g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    g.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.28);
+                    o.start();
+                    o.stop(audioCtx.currentTime + 0.28);
                 } else if (type === 'win') {
-                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
                         const o2 = audioCtx.createOscillator();
                         const g2 = audioCtx.createGain();
                         o2.type = 'triangle';
-                        o2.frequency.value = freq;
+                        o2.frequency.value = f;
                         o2.connect(g2);
                         g2.connect(audioCtx.destination);
-                        const t = now + idx * 0.09;
-                        g2.gain.setValueAtTime(0.2, t);
-                        g2.gain.exponentialRampToValueAtTime(0.01, t + 0.42);
+                        const t = audioCtx.currentTime + (i * 0.09);
+                        g2.gain.setValueAtTime(0, t);
+                        g2.gain.linearRampToValueAtTime(0.25, t + 0.04);
+                        g2.gain.exponentialRampToValueAtTime(0.01, t + 0.45);
                         o2.start(t);
-                        o2.stop(t + 0.42);
+                        o2.stop(t + 0.45);
                     });
                 }
             } catch (e) {}
         }
-        document.body.addEventListener('touchstart', () => {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-        }, { once: true });
 
-        // ==================== 3. 遊戲全域狀態與本地紀錄 ====================
-        const STORAGE_KEY = 'subtraction_park_records_v3';
-        let practiceLogs = [];
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) practiceLogs = JSON.parse(saved);
-        } catch (e) {
-            practiceLogs = [];
-        }
-
-        function saveLogs() {
+        let voiceEnabled = true;
+        function speak(text) {
+            if (!voiceEnabled || !('speechSynthesis' in window)) return;
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(practiceLogs));
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'zh-TW';
+                u.rate = 0.88;
+                window.speechSynthesis.speak(u);
             } catch (e) {}
         }
 
-        let playerChar = '🦊';
-        let maxMinuend = 10;           // 教師設定：被減數（全部）上限（5~50）
-        let maxSubtrahend = 10;        // 教師設定：減數（拿走）上限（1~50）
-        let questionsPerLevel = 5;     // 教師設定：每關題數（1~15 題，預設 5 題）
-        let level5MixNonZero = false;  // 教師設定：第 5 關是否把非 0 題目放進來一起混練（false=純練0題型, true=0與一般減法混練）
-        let unlockedLvl = 1;
+        document.body.addEventListener('click', ensureAudio, { once: true });
+
+        // ==================== 2. 遊戲狀態與題庫設計 ====================
+        let charEmoji = '🦊';
+        let charName = '小狐狸';
+        let globalMaxMinuend = 10;
+        let targetQCount = 5;
+        let colorHintEnabled = true;
+        let maxLvl = 1;
         let curLvl = 1;
-        let qIndex = 0;
-        let levelPool = [];
+        let qDone = 0;
 
-        // 當前題目變數
-        let minuend = 5;
-        let subtrahend = 2;
-        let difference = 3;
-        let curIcon = '🍎';
+        // 減法核心變數：minuend(被減數/全部) - subtrahend(減數/拿走) = difference(差/剩下)
+        let minuend = 0;
+        let subtrahend = 0;
+        let difference = 0;
+        let currentPromptText = '';
+        let currentItemObj = { icon: '🍎', unit: '顆', name: '蘋果' };
 
-        // 當前題目答錯紀錄（用於學習分析）
-        let currentQWrongAttempts = [];
+        // 物品＋量詞對應表（專供第 4、5 關彩色量詞句型引導條）
+        const ITEM_CATALOG = [
+            { icon: '🍎', unit: '顆', name: '蘋果' },
+            { icon: '🧱', unit: '塊', name: '積木' },
+            { icon: '🍩', unit: '個', name: '甜甜圈' },
+            { icon: '🍓', unit: '顆', name: '草莓' },
+            { icon: '🚗', unit: '台', name: '車子' },
+            { icon: '🧸', unit: '隻', name: '小熊' },
+            { icon: '🍪', unit: '片', name: '餅乾' },
+            { icon: '⭐', unit: '顆', name: '星星' }
+        ];
 
-        // 第 1 關兩階段操作板狀態
-        let l1Stage = 'yellowToGreen'; // 'yellowToGreen' -> 'greenToBlue' -> 'done'
-        let l1GreenCount = 0;
-        let l1BlueCount = 0;
-
-        // 第 2、3、5 關狀態
-        let animationTriggered = false;
-        let equationUnlocked = false;
-
-        // 第 4 關：聽題目自己畫紅叉叉狀態
-        let l4CrossedCount = 0;
-        let l4CrossedFlags = [];
-
-        // 第 6 關：互動手指模擬器狀態（0: 握拳未伸, 1: 伸直亮起, 2: 折下拿走）
-        let fingerStates = Array(10).fill(0);
-        let l6Stage = 'extend'; // 'extend' -> 'fold' -> 'done'
+        // 第 1 關兩步驟手動操作狀態（step1: 從左上黃區拿全部放進十格板 -> step2: 從十格板拿走放進右上藍區）
+        let l1Phase = 1;
+        let l1PlacedCount = 0;
+        let l1MovedCount = 0;
+        // 第 2、3 關兩段式視覺提示狀態
+        let stageActionTriggered = false;
+        // 第 4、5 關：聽句型自己畫紅叉叉互動狀態
+        let userCrossedIndices = [];
+        let l45WrongClicks = 0;
+        // 第 5 關設定：是否混入一般減法（非 0 題），預設 false（專練遇見 0）
+        let level5MixNormal = false;
+        // 第 6 關：高擬真雙手折手指模擬器狀態
+        let fingerStates = Array(10).fill(0); // 0=握拳, 1=伸直亮起, 2=折進掌心(拿走)
+        let l6Stage = 'extend'; // 'extend' | 'fold' | 'done'
         let l6ExtendedCount = 0;
         let l6FoldedCount = 0;
-        let l6AutoTimers = [];
+        let demoTimers = [];
 
         let inputs = ['', '', '', '', ''];
         let curSlot = 0;
+        let currentLevelQuestions = [];
+        let wrongAttemptsInQuestion = 0;
 
         const LEVEL_NAMES = {
-            1: '第 1 關：動手拿積木操作板',
-            2: '第 2 關：操作板動畫＋列式',
-            3: '第 3 關：紅叉叉動畫＋列式',
-            4: '第 4 關：✏️ 聽題目自己畫叉叉',
-            5: '第 5 關：🍽️ 遇見 0＋互動畫叉綜合',
-            6: '第 6 關：🖐️ 手指頭小幫手',
-            7: '第 7 關：🧠 純手指心算終極挑戰'
+            1: '第 1 關：動手拿積木',
+            2: '第 2 關：操作板動畫',
+            3: '第 3 關：紅叉叉動畫',
+            4: '第 4 關：聽句型畫叉叉',
+            5: '第 5 關：遇見0＋畫叉綜合',
+            6: '第 6 關：手指頭小幫手',
+            7: '第 7 關：純手指心算'
         };
 
-        const EMOJIS = ['🍎', '🧱', '🍩', '🍓', '🚗', '🧸', '🍪', '⭐'];
-
-        function clearL6Timers() {
-            l6AutoTimers.forEach(t => clearTimeout(t));
-            l6AutoTimers = [];
-        }
-
-        // ==================== 4. 畫面切換與地圖更新 ====================
         function showScreen(id) {
-            clearL6Timers();
-            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        function selectChar(emoji) {
+        function selectChar(emoji, name) {
             playSnd('click');
-            playerChar = emoji;
-            document.getElementById('avatar-pin').textContent = playerChar;
+            charEmoji = emoji;
+            charName = name;
+            document.getElementById('avatar').textContent = charEmoji;
+            speak(`你好，我是${charName}，我們一起去闖關吧！`);
             showScreen('screen-map');
-            updateMapUI();
+            updateMap();
         }
 
-        function updateMapUI() {
-            const rangeBadge = document.getElementById('map-range-badge');
-            if (rangeBadge) {
-                rangeBadge.textContent = `全部上限：${maxMinuend} ｜ 拿走上限：${maxSubtrahend} ｜ 每關 ${questionsPerLevel} 題`;
-            }
-            const avatarPin = document.getElementById('avatar-pin');
+        function updateMap() {
             for (let i = 1; i <= 7; i++) {
-                const node = document.getElementById(`node-${i}`);
-                if (!node) continue;
-                if (i <= unlockedLvl) {
-                    node.className = 'map-node node-unlocked';
-                    if (i === unlockedLvl) {
-                        node.appendChild(avatarPin);
-                    }
+                const btn = document.getElementById(`node-${i}`);
+                if (!btn) continue;
+                if (i <= maxLvl) {
+                    btn.className = 'map-node node-unlocked';
+                    if (i === maxLvl) btn.appendChild(document.getElementById('avatar'));
                 } else {
-                    node.className = 'map-node node-locked';
+                    btn.className = 'map-node node-locked';
                 }
             }
+        }
+
+        function clearDemoTimers() {
+            demoTimers.forEach(t => clearTimeout(t));
+            demoTimers = [];
         }
 
         function goMap() {
+            clearDemoTimers();
             playSnd('click');
-            clearL6Timers();
-            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
             showScreen('screen-map');
-            updateMapUI();
-        }
-
-        // ==================== 5. 不重複題庫生成引擎 ====================
-        function buildSubtractionPool(lvl) {
-            let pool = [];
-            // 第 6 關「手指頭小幫手」配合人類雙手 10 根手指，自動鎖定在 10 以內
-            const effMaxMinuend = (lvl === 6) ? Math.min(10, maxMinuend) : maxMinuend;
-            const effMaxSub = Math.min(maxSubtrahend, effMaxMinuend);
-
-            for (let total = 1; total <= effMaxMinuend; total++) {
-                const upperTake = Math.min(total, effMaxSub);
-                for (let take = 0; take <= upperTake; take++) {
-                    if (lvl === 1 || lvl === 2 || lvl === 3 || lvl === 4) {
-                        // 第 1～4 關：嚴格排除所有 0 題型（減數 >= 1 且 差 >= 1）
-                        if (take >= 1 && take < total) pool.push([total, take]);
-                    } else if (lvl === 5) {
-                        // 第 5 關：遇見 0 互動畫叉（可設定「純 0 專練」或「0 與非 0 混合練習」）
-                        const isZeroCase = (take === 0 || take === total);
-                        if (level5MixNonZero) {
-                            pool.push([total, take]);
-                        } else if (isZeroCase) {
-                            pool.push([total, take]);
-                        }
-                    } else if (lvl === 7) {
-                        // 第 7 關：包含所有加減與 0 的綜合題型
-                        pool.push([total, take]);
-                    } else if (lvl === 6) {
-                        // 第 6 關：雙手 10 以內（涵蓋拿走 1～total）
-                        if (take >= 1 && take <= total) pool.push([total, take]);
-                    }
-                }
-            }
-
-            if (pool.length === 0) {
-                pool.push([Math.max(2, effMaxMinuend), 1]);
-            }
-
-            // Fisher-Yates 洗牌演算法
-            for (let i = pool.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [pool[i], pool[j]] = [pool[j], pool[i]];
-            }
-
-            const baseLen = pool.length;
-            let idx = 0;
-            while (pool.length < questionsPerLevel) {
-                pool.push(pool[idx % baseLen]);
-                idx++;
-            }
-
-            return pool.slice(0, questionsPerLevel);
         }
 
         function startLevel(lvl) {
-            if (lvl > unlockedLvl) {
+            if (lvl > maxLvl) {
                 playSnd('err');
+                speak('請先完成前面的關卡喔！');
                 return;
             }
             playSnd('click');
             curLvl = lvl;
-            qIndex = 0;
-            levelPool = buildSubtractionPool(lvl);
+            qDone = 0;
+            wrongAttemptsInQuestion = 0;
+            currentLevelQuestions = buildLevelQuestions(lvl);
             document.getElementById('level-title').textContent = LEVEL_NAMES[lvl];
             showScreen('screen-game');
-            loadQuestion();
+            genQ();
         }
 
-        // ==================== 6. 載入題目與七關專屬介面 ====================
-        function getAdaptiveEmojiSize(count) {
-            if (count > 30) return 'clamp(0.8rem, 2vw, 1.1rem)';
-            if (count > 20) return 'clamp(0.95rem, 2.4vw, 1.35rem)';
-            if (count > 12) return 'clamp(1.15rem, 3vw, 1.65rem)';
-            if (count > 6)  return 'clamp(1.4rem, 3.8vw, 2rem)';
-            return 'clamp(1.85rem, 5vw, 2.75rem)';
+        function buildLevelQuestions(lvl) {
+            let pool = [];
+            // 第 6 關用雙手（最多 10 根手指），其餘依設定上限出題
+            const effectiveMax = (lvl === 6) ? Math.min(10, globalMaxMinuend) : globalMaxMinuend;
+
+            for (let a = 1; a <= effectiveMax; a++) {
+                for (let b = 0; b <= a; b++) {
+                    const diff = a - b;
+                    if (lvl === 1) {
+                        // 第 1 關：依設定範圍（預設 10 以內），不含 0，自己兩步驟操作十格板
+                        if (b >= 1 && diff >= 1) pool.push([a, b]);
+                    } else if (lvl === 2 || lvl === 3 || lvl === 4) {
+                        // 第 2、3、4 關：一般減法，嚴格不含 0（既不減 0、也不減光）
+                        if (b >= 1 && diff >= 1) pool.push([a, b]);
+                    } else if (lvl === 5) {
+                        // 第 5 關：遇見 0（減 0 或全部拿走剩 0），若開啟混練則納入一般減法
+                        if (level5MixNormal) {
+                            pool.push([a, b]);
+                        } else if (b === 0 || diff === 0) {
+                            pool.push([a, b]);
+                        }
+                    } else if (lvl === 6) {
+                        // 第 6 關：雙手模擬器（10 以內一般減法）
+                        if (b >= 1 && diff >= 1) pool.push([a, b]);
+                    } else if (lvl === 7) {
+                        // 第 7 關：純手指心算綜合挑戰（全範圍）
+                        pool.push([a, b]);
+                    }
+                }
+            }
+
+            if (pool.length === 0) pool = [[5, 2], [4, 1], [6, 3], [7, 2], [8, 4]];
+
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            // 若題庫數量少於目標題數，安全補齊避免溢位
+            const selected = [];
+            for (let k = 0; k < targetQCount; k++) {
+                selected.push(pool[k % pool.length]);
+            }
+            return selected;
         }
 
-        // 產生超大紅叉叉 SVG（比圖示本體大，確保清晰可見）
-        function getBigCrossSVG() {
-            return `
-                <div class="big-red-cross cross-animate">
-                    <svg viewBox="0 0 100 100">
-                        <line x1="12" y1="12" x2="88" y2="88" stroke="#ef4444" stroke-width="18" stroke-linecap="round" />
-                        <line x1="88" y1="12" x2="12" y2="88" stroke="#ef4444" stroke-width="18" stroke-linecap="round" />
-                    </svg>
-                </div>
-            `;
-        }
+        // ==================== 3. 題目生成與舞台繪製 ====================
+        function genQ() {
+            clearDemoTimers();
+            const q = currentLevelQuestions[qDone % currentLevelQuestions.length];
+            minuend = q[0];
+            subtrahend = q[1];
+            difference = minuend - subtrahend;
+            currentItemObj = ITEM_CATALOG[Math.floor(Math.random() * ITEM_CATALOG.length)];
+            l1Phase = 1;
+            l1PlacedCount = 0;
+            l1MovedCount = 0;
+            stageActionTriggered = false;
+            userCrossedIndices = [];
+            l45WrongClicks = 0;
+            wrongAttemptsInQuestion = 0;
 
-        function loadQuestion() {
-            clearL6Timers();
-            const [total, take] = levelPool[qIndex];
-            minuend = total;
-            subtrahend = take;
-            difference = total - take;
-            curIcon = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-            currentQWrongAttempts = [];
-
-            // 重置各關卡互動狀態
-            l1Stage = 'yellowToGreen';
-            l1GreenCount = 0;
-            l1BlueCount = 0;
-            animationTriggered = false;
-            equationUnlocked = (curLvl !== 1);
-
-            // 重置第 4、5 關自己畫叉叉狀態
-            l4CrossedCount = 0;
-            l4CrossedFlags = Array(total).fill(false);
-
-            // 重置第 6 關手指狀態
             fingerStates = Array(10).fill(0);
             l6Stage = 'extend';
             l6ExtendedCount = 0;
             l6FoldedCount = 0;
 
-            const overlay = document.getElementById('overlay-next');
-            overlay.classList.add('hidden');
-            overlay.classList.remove('flex');
+            inputs = ['', '', '', '', ''];
+
+            // 依關卡設定算式鷹架
+            if (curLvl === 1) {
+                inputs = [String(minuend), '-', String(subtrahend), '=', ''];
+            } else if (curLvl === 2 || curLvl === 3) {
+                inputs = ['', '-', '', '=', ''];
+            } else if (curLvl === 6) {
+                inputs = [String(minuend), '-', String(subtrahend), '=', ''];
+            } else {
+                // 第 4、5、7 關：全部 5 格皆由學生自主填寫
+                inputs = ['', '', '', '', ''];
+            }
+
+            const lock1 = (curLvl === 1 || curLvl === 2 || curLvl === 3 || curLvl === 6);
+            const lock02 = (curLvl === 1 || curLvl === 6);
+
+            document.getElementById('s0').classList.toggle('slot-locked', lock02);
+            document.getElementById('s2').classList.toggle('slot-locked', lock02);
+            document.getElementById('s1').classList.toggle('slot-locked', lock1);
+            document.getElementById('s3').classList.toggle('slot-locked', lock1);
+            document.getElementById('btn-minus').disabled = lock1;
+            document.getElementById('btn-eq').disabled = lock1;
+
+            document.getElementById('overlay-next').classList.add('hidden');
+            document.getElementById('overlay-next').classList.remove('flex');
 
             renderStage();
 
-            // 設定算式防呆框與已知數字/符號
-            const s0 = document.getElementById('s0');
-            const s1 = document.getElementById('s1');
-            const s2 = document.getElementById('s2');
-            const s3 = document.getElementById('s3');
-            const s4 = document.getElementById('s4');
-            const btnMinus = document.getElementById('btn-minus');
-            const btnEq = document.getElementById('btn-eq');
-
-            // 清除舊樣式與標籤
-            [s0, s1, s2, s3, s4].forEach(el => {
-                el.classList.remove(
-                    'slot-locked', 'slot-clear-display', 'slot-focused', 'animate-shake',
-                    'slot-cue-blue', 'slot-cue-red', 'slot-cue-yellow'
-                );
-            });
-            ['lbl-s0', 'lbl-s1', 'lbl-s2', 'lbl-s3', 'lbl-s4'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-
             if (curLvl === 1 || curLvl === 6) {
-                // 第 1 關 & 第 6 關：算式直接完整呈現（深色高對比），學生只填最後答案
-                inputs = [String(minuend), '➖', String(subtrahend), '🟰', ''];
-                [s0, s1, s2, s3].forEach(el => el.classList.add('slot-locked', 'slot-clear-display'));
-                btnMinus.disabled = true;
-                btnEq.disabled = true;
-                curSlot = 4;
-            } else if (curLvl === 2 || curLvl === 3) {
-                // 第 2、3 關：保留 ➖ 與 🟰 符號提示，填入三個數字格
-                inputs = ['', '➖', '', '🟰', ''];
-                [s1, s3].forEach(el => el.classList.add('slot-locked'));
-                btnMinus.disabled = true;
-                btnEq.disabled = true;
-                curSlot = 0;
-            } else if (curLvl === 4 || curLvl === 5) {
-                // 第 4、5 關：全空白防呆框 + 紙本同款「藍／紅／黃」色彩提示框
-                inputs = ['', '', '', '', ''];
-                btnMinus.disabled = false;
-                btnEq.disabled = false;
-                s0.classList.add('slot-cue-blue');
-                s2.classList.add('slot-cue-red');
-                s4.classList.add('slot-cue-yellow');
-                ['lbl-s0', 'lbl-s1', 'lbl-s2', 'lbl-s3', 'lbl-s4'].forEach(id => {
-                    document.getElementById(id).classList.remove('hidden');
-                });
-                curSlot = 0;
+                setFocus(4, false);
             } else {
-                // 第 7 關：全空白防呆框（學生自行填寫所有數字與 ➖、🟰）
-                inputs = ['', '', '', '', ''];
-                btnMinus.disabled = false;
-                btnEq.disabled = false;
-                curSlot = 0;
+                setFocus(0, false);
             }
-
-            updateSlotLockState();
             renderSlots();
 
-            // 載入題目後自動語音報讀：「全部有幾個，拿走幾個，剩下幾個？」
-            setTimeout(() => speakCurrentQuestion(), 260);
+            // 語音報讀題目（全關卡統一搭配量詞句型報讀）
+            if (curLvl === 1) {
+                currentPromptText = `全部有 ${minuend} ${currentItemObj.unit}${currentItemObj.name}，拿走 ${subtrahend} ${currentItemObj.unit}，剩下幾${currentItemObj.unit}？請先從左上方黃色區，點出 ${minuend} ${currentItemObj.unit}放進綠色格子！`;
+            } else if (curLvl === 2 || curLvl === 3) {
+                currentPromptText = `全部有 ${minuend} ${currentItemObj.unit}${currentItemObj.name}，拿走 ${subtrahend} ${currentItemObj.unit}，剩下幾${currentItemObj.unit}？先數一數全部有幾${currentItemObj.unit}！`;
+            } else if (curLvl === 4 || curLvl === 5 || curLvl === 7) {
+                currentPromptText = `全部有 ${minuend} ${currentItemObj.unit}${currentItemObj.name}，拿走 ${subtrahend} ${currentItemObj.unit}，剩下幾${currentItemObj.unit}？`;
+            } else if (curLvl === 6) {
+                currentPromptText = `全部有 ${minuend} ${currentItemObj.unit}${currentItemObj.name}，拿走 ${subtrahend} ${currentItemObj.unit}，剩下幾${currentItemObj.unit}？先比出 ${minuend} 根手指頭，再拿走 ${subtrahend} 根`;
+            }
+            speak(currentPromptText);
         }
 
-        function getBoardItemSize(count) {
-            if (count > 35) return 'clamp(0.75rem, 1.8vw, 1rem)';
-            if (count > 24) return 'clamp(0.85rem, 2.2vw, 1.15rem)';
-            if (count > 16) return 'clamp(1rem, 2.6vw, 1.35rem)';
-            if (count > 10) return 'clamp(1.15rem, 3vw, 1.55rem)';
-            return 'clamp(1.35rem, 3.6vw, 1.9rem)';
+        function repeatPrompt() {
+            playSnd('click');
+            if (currentPromptText) speak(currentPromptText);
+        }
+
+        function getEmojiSize(count) {
+            if (count > 12) return 'clamp(1.3rem, 3.8vw, 2rem)';
+            if (count > 8) return 'clamp(1.7rem, 4.5vw, 2.4rem)';
+            if (count > 5) return 'clamp(2rem, 5.2vw, 2.8rem)';
+            return 'clamp(2.4rem, 6.2vw, 3.3rem)';
+        }
+
+        function buildTenFrameGrid(itemsArray, slotCount, clickableInStep2) {
+            const cols = slotCount > 10 ? 10 : 5;
+            let cells = '';
+            for (let i = 0; i < slotCount; i++) {
+                const itemIcon = itemsArray[i] || '';
+                const canClick = clickableInStep2 && itemIcon !== '';
+                cells += `
+                    <div ${canClick ? 'onclick="tapL1Step2()"' : ''}
+                         class="bg-white rounded-lg border-2 ${canClick ? 'border-rose-400 cursor-pointer hover:bg-rose-50 active:scale-95 animate-pulse' : 'border-slate-700'} flex items-center justify-center h-8 sm:h-11 transition-transform">
+                        ${itemIcon ? `<span class="text-xl sm:text-3xl leading-none emoji-pop">${itemIcon}</span>` : ''}
+                    </div>
+                `;
+            }
+            return `
+                <div class="w-full max-w-xl mx-auto bg-slate-800 p-1.5 sm:p-2 rounded-2xl grid gap-1.5 sm:gap-2 shadow-inner"
+                     style="grid-template-columns: repeat(${cols}, minmax(0, 1fr));">
+                    ${cells}
+                </div>
+            `;
         }
 
         function renderStage() {
             const wrapper = document.getElementById('stage-wrapper');
+            const frameSlots = minuend > 10 ? 20 : 10;
+            const remVal = (inputs[4] === String(difference) && inputs[4] !== '') ? `${difference} ${currentItemObj.unit}` : `幾${currentItemObj.unit}？`;
+            const sentenceBarHtml = `
+                <div onclick="repeatPrompt()" class="cursor-pointer bg-slate-50 hover:bg-slate-100 border-2 border-slate-300 rounded-2xl px-2.5 py-1 sm:px-4 sm:py-1.5 flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 text-sm sm:text-lg font-black text-slate-800 shadow-sm shrink-0">
+                    <span>🔊 全部有</span>
+                    <span class="bg-blue-100 text-blue-900 border-2 border-blue-500 px-2 py-0.5 rounded-xl">${minuend} ${currentItemObj.unit}${currentItemObj.name}</span>
+                    <span>，拿走</span>
+                    <span class="bg-red-100 text-red-900 border-2 border-red-500 px-2 py-0.5 rounded-xl">${subtrahend} ${currentItemObj.unit}</span>
+                    <span>，剩下</span>
+                    <span id="sentence-remain-pill" class="bg-yellow-100 text-yellow-900 border-2 border-yellow-500 px-2 py-0.5 rounded-xl">${remVal}</span>
+                </div>
+            `;
 
             if (curLvl === 1) {
-                // 【第 1 關：雙向操作板（黃區多放幾個 -> 點拿全部進綠格 -> 再點拿走移進藍區）】
-                const decoyExtra = Math.min(4, Math.max(2, Math.ceil(minuend * 0.25)));
-                const yellowPoolCount = minuend + decoyExtra;
-                const ySize = getBoardItemSize(yellowPoolCount);
-
-                let yellowItemsHtml = '';
-                for (let i = 0; i < yellowPoolCount; i++) {
-                    yellowItemsHtml += `
-                        <button id="y-item-${i}" onclick="tapYellowToGreen(${i})"
-                                class="emoji-pop p-0.5 sm:p-1 rounded-lg bg-white/95 border border-amber-300 shadow-sm active:scale-90 transition-transform leading-none inline-flex items-center justify-center shrink-0"
-                                style="font-size:${ySize}">
-                            ${curIcon}
+                // 【第 1 關：十格陣三區操作板 ＋ 彩色量詞句型引導條】
+                const yellowRemain = minuend - l1PlacedCount;
+                let yellowHtml = '';
+                for (let i = 0; i < yellowRemain; i++) {
+                    const canTap = (l1Phase === 1);
+                    yellowHtml += `
+                        <button ${canTap ? 'onclick="tapL1Step1()"' : ''}
+                                class="bg-white rounded-xl border-2 ${canTap ? 'border-amber-400 cursor-pointer hover:scale-105 active:scale-95 shadow-sm' : 'border-slate-200 opacity-60'} w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center transition-transform">
+                            <span class="text-xl sm:text-2xl leading-none">${currentItemObj.icon}</span>
                         </button>
                     `;
                 }
 
-                // 綠色格子依據被減數自動規劃列數（5 個一排，支援超過 10 的多排十格陣）
-                const totalCells = Math.max(10, Math.ceil(minuend / 5) * 5);
-                const rowCount = Math.ceil(totalCells / 5);
-                const gSize = getBoardItemSize(totalCells);
-                const bSize = getBoardItemSize(subtrahend);
-
-                let greenCellsHtml = '';
-                for (let c = 0; c < totalCells; c++) {
-                    greenCellsHtml += `
-                        <div id="g-cell-${c}" onclick="tapGreenToBlue(${c})"
-                             class="bg-white border border-slate-500 rounded-md flex items-center justify-center cursor-pointer active:bg-emerald-50 min-h-0 overflow-hidden"
-                             style="font-size:${gSize}">
+                let blueHtml = '';
+                for (let i = 0; i < l1MovedCount; i++) {
+                    blueHtml += `
+                        <div class="bg-white rounded-xl border-2 border-sky-400 w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center shadow-sm emoji-pop">
+                            <span class="text-xl sm:text-2xl leading-none">${currentItemObj.icon}</span>
                         </div>
                     `;
                 }
 
+                const inGreenCount = l1PlacedCount - l1MovedCount;
+                const greenItems = Array(inGreenCount).fill(currentItemObj.icon);
+                const gridHtml = buildTenFrameGrid(greenItems, frameSlots, l1Phase === 2 && l1MovedCount < subtrahend);
+
+                let badgeText = '';
+                let badgeClass = '';
+                if (l1Phase === 1) {
+                    badgeText = `步驟1：拿 ${minuend} ${currentItemObj.unit}下來 (${l1PlacedCount}/${minuend})`;
+                    badgeClass = 'bg-rose-50 text-rose-700 border-2 border-rose-400';
+                } else if (l1Phase === 2) {
+                    badgeText = `步驟2：拿走 ${subtrahend} ${currentItemObj.unit} (${l1MovedCount}/${subtrahend})`;
+                    badgeClass = 'bg-sky-50 text-sky-700 border-2 border-sky-400';
+                } else {
+                    badgeText = `✅ 完成操作！數綠色格子剩幾${currentItemObj.unit}`;
+                    badgeClass = 'bg-emerald-50 text-emerald-700 border-2 border-emerald-500';
+                }
+
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white rounded-[1.75rem] border-[5px] border-slate-800 shadow-xl flex flex-col overflow-hidden">
-                        <!-- 頂部白色任務狀態列 -->
-                        <div class="bg-white border-b-4 border-slate-800 px-3 py-1.5 flex items-center justify-between gap-2 shrink-0">
-                            <span class="text-xs sm:text-sm font-black text-slate-700 truncate">操作板：先拿全部 ➔ 再移走</span>
-                            <span id="l1-step-badge" class="bg-amber-200 text-amber-950 border border-amber-500 font-black px-2.5 py-0.5 rounded-full text-xs sm:text-sm shrink-0">
-                                步驟1：拿 ${minuend} 個下來 (0/${minuend})
+                    <div class="w-full max-w-3xl h-full bg-white rounded-[1.8rem] border-[4px] border-slate-800 shadow-xl flex flex-col overflow-hidden">
+                        <!-- 頂部彩色量詞句型引導條 -->
+                        <div class="px-3 py-1.5 bg-white border-b-2 border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                            ${sentenceBarHtml}
+                            <span class="${badgeClass} text-xs sm:text-sm font-black px-2.5 py-1 rounded-full shrink-0">
+                                ${badgeText}
                             </span>
                         </div>
 
-                        <!-- 中間雙色區：左黃備料區 + 右藍拿走區 -->
-                        <div class="flex-1 flex border-b-4 border-slate-800 min-h-0">
-                            <!-- 左側黃區 -->
-                            <div id="l1-yellow-zone" class="flex-1 bg-[#fef08a] border-r-4 border-slate-800 p-2 sm:p-2.5 flex flex-col justify-between relative active-zone-guide min-w-0 overflow-hidden">
-                                <div class="text-[11px] sm:text-xs font-black text-amber-900 bg-white/85 px-2 py-0.5 rounded-md self-start shrink-0">
-                                    全部積木堆（點 ${minuend} 個）
+                        <!-- 中間左右兩區：左上黃區 + 右上藍區 -->
+                        <div class="flex-1 flex border-b-2 border-slate-800 min-h-0">
+                            <!-- 左上黃區 -->
+                            <div class="flex-1 bg-amber-200/85 ${l1Phase === 1 ? 'ring-4 ring-inset ring-rose-500' : ''} border-r-2 border-slate-800 p-1.5 flex flex-col justify-between items-center overflow-hidden">
+                                <span class="bg-amber-400 text-amber-950 text-xs sm:text-sm font-black px-3 py-0.5 rounded-full shadow-sm shrink-0">
+                                    點一點拿 ${minuend} ${currentItemObj.unit}下來
+                                </span>
+                                <div class="flex flex-wrap justify-center content-center items-center gap-1.5 my-auto overflow-hidden">
+                                    ${yellowHtml}
                                 </div>
-                                <div class="flex-1 flex flex-wrap justify-center content-center items-center gap-1 sm:gap-1.5 my-0.5 overflow-y-auto px-0.5">
-                                    ${yellowItemsHtml}
-                                </div>
-                                <div class="flex justify-center shrink-0">
-                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 drop-shadow" viewBox="0 0 60 55">
-                                        <path d="M20 4 H40 V28 H52 L30 50 L8 28 H20 Z" fill="#facc15" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
-                                    </svg>
-                                </div>
+                                <span class="text-sky-600 text-base sm:text-lg leading-none shrink-0">⬇️</span>
                             </div>
 
-                            <!-- 右側藍區：拿走區 -->
-                            <div id="l1-blue-zone" class="flex-1 bg-[#bae6fd] p-2 sm:p-2.5 flex flex-col justify-between relative min-w-0 overflow-hidden">
-                                <div class="text-[11px] sm:text-xs font-black text-sky-950 bg-white/85 px-2 py-0.5 rounded-md self-end shrink-0">
-                                    拿走區（目標 ${subtrahend} 個）
+                            <!-- 右上藍區（拿走區） -->
+                            <div class="flex-1 bg-sky-200/85 ${l1Phase === 2 ? 'ring-4 ring-inset ring-sky-600' : ''} p-1.5 flex flex-col justify-between items-center overflow-hidden">
+                                <span class="bg-sky-400 text-sky-950 text-xs sm:text-sm font-black px-3 py-0.5 rounded-full shadow-sm shrink-0">
+                                    拿走區 (${subtrahend} ${currentItemObj.unit})
+                                </span>
+                                <div class="flex flex-wrap justify-center content-center items-center gap-1.5 my-auto overflow-hidden">
+                                    ${blueHtml}
                                 </div>
-                                <div id="l1-blue-items" data-chip-size="${bSize}" class="flex-1 flex flex-wrap justify-center content-center items-center gap-1 sm:gap-1.5 my-0.5 overflow-y-auto px-0.5"></div>
-                                <div class="flex justify-center shrink-0">
-                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 drop-shadow" viewBox="0 0 60 55">
-                                        <path d="M20 50 H40 V26 H52 L30 4 L8 26 H20 Z" fill="#38bdf8" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
-                                    </svg>
-                                </div>
+                                <span class="text-sky-600 text-base sm:text-lg leading-none shrink-0">⬆️</span>
                             </div>
                         </div>
 
-                        <!-- 下方綠色十格操作區 -->
-                        <div id="l1-green-zone" class="h-[34%] min-h-[78px] bg-[#bbf7d0] p-2 sm:p-2.5 flex flex-col justify-center items-center shrink-0">
-                            <div class="grid grid-cols-5 gap-1.5 w-full max-w-md h-full" style="grid-template-rows: repeat(${rowCount}, minmax(0, 1fr));">
-                                ${greenCellsHtml}
-                            </div>
+                        <!-- 下方綠色十格陣操作區 -->
+                        <div class="bg-emerald-100/90 p-2 flex flex-col justify-center items-center shrink-0">
+                            ${gridHtml}
                         </div>
                     </div>
                 `;
             } else if (curLvl === 2) {
-                // 【第 2 關：操作板（保留板子＋拿走物品自動飛入藍色區域停留）】
-                const totalCells = Math.max(10, Math.ceil(minuend / 5) * 5);
-                const rowCount = Math.ceil(totalCells / 5);
-                const gSize = getBoardItemSize(totalCells);
-                const bSize = getBoardItemSize(subtrahend);
+                // 【第 2 關：十格陣操作板動畫＋列式 ＋ 彩色量詞句型引導條】
+                const greenCount = stageActionTriggered ? difference : minuend;
+                const blueCount = stageActionTriggered ? subtrahend : 0;
 
-                let greenCellsHtml = '';
-                for (let c = 0; c < totalCells; c++) {
-                    const hasItem = c < minuend;
-                    greenCellsHtml += `
-                        <div class="bg-white border border-slate-500 rounded-md flex items-center justify-center min-h-0 overflow-hidden" style="font-size:${gSize}">
-                            ${hasItem ? `<span id="l2-g-item-${c}" class="emoji-pop">${curIcon}</span>` : ''}
+                let blueHtml = '';
+                for (let i = 0; i < blueCount; i++) {
+                    blueHtml += `
+                        <div class="bg-white rounded-xl border-2 border-sky-400 w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center shadow-sm emoji-pop">
+                            <span class="text-xl sm:text-2xl leading-none">${currentItemObj.icon}</span>
                         </div>
                     `;
                 }
 
+                const greenItems = Array(greenCount).fill(currentItemObj.icon);
+                const gridHtml = buildTenFrameGrid(greenItems, frameSlots, false);
+
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white rounded-[1.75rem] border-[5px] border-slate-800 shadow-xl flex flex-col overflow-hidden">
-                        <div class="bg-white border-b-4 border-slate-800 px-3 py-1.5 flex items-center justify-between gap-2 shrink-0">
-                            <span class="text-xs sm:text-sm font-black text-slate-700 truncate">操作板：填完「全部」看動畫</span>
-                            <span id="l2-status-badge" class="bg-amber-100 text-amber-900 border border-amber-400 font-black px-2.5 py-0.5 rounded-full text-xs sm:text-sm shrink-0">
-                                先數下面綠色格子全部有幾個
+                    <div class="w-full max-w-3xl h-full bg-white rounded-[1.8rem] border-[4px] border-slate-800 shadow-xl flex flex-col overflow-hidden">
+                        <!-- 頂部彩色量詞句型引導條 -->
+                        <div class="px-3 py-1.5 bg-white border-b-2 border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                            ${sentenceBarHtml}
+                            <span class="bg-amber-50 text-amber-800 border-2 border-amber-400 text-xs sm:text-sm font-black px-2.5 py-1 rounded-full shrink-0">
+                                ${stageActionTriggered ? `✨ 已拿走！看綠色格子剩幾${currentItemObj.unit}` : `先填全部有幾${currentItemObj.unit}`}
                             </span>
                         </div>
 
-                        <div class="flex-1 flex border-b-4 border-slate-800 min-h-0">
-                            <div class="flex-1 bg-[#fef08a] border-r-4 border-slate-800 p-2 sm:p-2.5 flex flex-col justify-between items-center min-w-0">
-                                <span class="text-[11px] sm:text-xs font-black text-amber-900 bg-white/85 px-2 py-0.5 rounded-md">全部已放進綠格</span>
-                                <svg class="w-6 h-6 sm:w-8 sm:h-8 drop-shadow my-auto" viewBox="0 0 60 55">
-                                    <path d="M20 4 H40 V28 H52 L30 50 L8 28 H20 Z" fill="#facc15" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
-                                </svg>
+                        <!-- 中間左右兩區 -->
+                        <div class="flex-1 flex border-b-2 border-slate-800 min-h-0">
+                            <div class="flex-1 bg-amber-200/85 border-r-2 border-slate-800 p-1.5 flex flex-col justify-center items-center gap-1.5">
+                                <span class="bg-amber-400 text-amber-950 text-xs sm:text-sm font-black px-3 py-0.5 rounded-full shadow-sm">
+                                    全部都在下面格子裡
+                                </span>
+                                <span class="text-sky-600 text-lg sm:text-xl leading-none">⬇️</span>
                             </div>
-                            <div class="flex-1 bg-[#bae6fd] p-2 sm:p-2.5 flex flex-col justify-between min-w-0 overflow-hidden">
-                                <span class="text-[11px] sm:text-xs font-black text-sky-950 bg-white/85 px-2 py-0.5 rounded-md self-end shrink-0">拿走區</span>
-                                <div id="l2-blue-items" data-chip-size="${bSize}" class="flex-1 flex flex-wrap justify-center content-center items-center gap-1 sm:gap-1.5 my-0.5 overflow-y-auto px-0.5"></div>
-                                <div class="flex justify-center shrink-0">
-                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 drop-shadow" viewBox="0 0 60 55">
-                                        <path d="M20 50 H40 V26 H52 L30 4 L8 26 H20 Z" fill="#38bdf8" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
-                                    </svg>
+
+                            <div class="flex-1 bg-sky-200/85 p-1.5 flex flex-col justify-between items-center overflow-hidden">
+                                <span class="bg-sky-400 text-sky-950 text-xs sm:text-sm font-black px-3 py-0.5 rounded-full shadow-sm shrink-0">
+                                    拿走區 (${subtrahend} ${currentItemObj.unit})
+                                </span>
+                                <div class="flex flex-wrap justify-center content-center items-center gap-1.5 my-auto overflow-hidden">
+                                    ${blueHtml}
                                 </div>
+                                <span class="text-sky-600 text-base sm:text-lg leading-none shrink-0">⬆️</span>
                             </div>
                         </div>
 
-                        <div class="h-[35%] min-h-[80px] bg-[#bbf7d0] p-2 sm:p-2.5 flex flex-col justify-center items-center shrink-0">
-                            <div class="grid grid-cols-5 gap-1.5 w-full max-w-md h-full" style="grid-template-rows: repeat(${rowCount}, minmax(0, 1fr));">
-                                ${greenCellsHtml}
-                            </div>
+                        <!-- 下方綠色十格陣 -->
+                        <div class="bg-emerald-100/90 p-2 flex flex-col justify-center items-center shrink-0">
+                            ${gridHtml}
                         </div>
                     </div>
                 `;
             } else if (curLvl === 3) {
-                // 【第 3 關：操作板褪除，改用超大紅叉叉動畫＋列式】
-                const size = getAdaptiveEmojiSize(minuend);
+                // 【第 3 關：紅叉叉兩段式動畫 ＋ 彩色量詞句型引導條】
+                const esz = getEmojiSize(minuend);
                 let itemsHtml = '';
                 for (let i = 0; i < minuend; i++) {
+                    const isCrossed = stageActionTriggered && (i >= difference);
                     itemsHtml += `
-                        <div id="anim-wrap-${i}" class="stage-item-card emoji-pop" style="font-size:${size}">
-                            <span>${curIcon}</span>
+                        <div class="relative inline-flex items-center justify-center p-1.5">
+                            <span style="font-size:${esz};" class="emoji-pop leading-none ${isCrossed ? 'opacity-70' : ''}">${currentItemObj.icon}</span>
+                            ${isCrossed ? `
+                                <svg class="cross-animate absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+                                    <line x1="12" y1="12" x2="88" y2="88" stroke="#EF4444" stroke-width="15" stroke-linecap="round"/>
+                                    <line x1="88" y1="12" x2="12" y2="88" stroke="#EF4444" stroke-width="15" stroke-linecap="round"/>
+                                </svg>
+                            ` : ''}
                         </div>
                     `;
                 }
 
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white/95 rounded-[2rem] border-4 border-sky-300 shadow-lg flex flex-col p-3 sm:p-4 overflow-hidden">
-                        <div class="flex items-center justify-between mb-2 shrink-0 gap-1.5 flex-wrap">
-                            <span class="bg-sky-100 text-sky-900 border border-sky-300 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm">
-                                先數「全部」有幾個
-                            </span>
-                            <span class="text-[11px] sm:text-xs font-black text-red-700 bg-red-50 border border-red-300 px-2 py-0.5 rounded-lg">
-                                ❌ 大紅叉＝拿走
-                            </span>
+                    <div class="w-full max-w-3xl h-full bg-white/95 rounded-[2rem] border-4 border-white shadow-xl flex flex-col justify-between p-2.5 sm:p-4 relative overflow-hidden">
+                        <div class="flex flex-wrap items-center justify-between gap-2 shrink-0">
+                            ${sentenceBarHtml}
+                            <div class="bg-rose-100 text-rose-800 text-xs sm:text-sm font-black px-3 py-1 rounded-full shrink-0">
+                                ${stageActionTriggered ? '❌ 紅叉叉是拿走的喔！' : `👀 先數全部有幾${currentItemObj.unit}`}
+                            </div>
                         </div>
-                        <div id="anim-plate" class="flex-1 bg-sky-50/70 rounded-2xl border-4 border-sky-300 shadow-inner flex flex-wrap justify-center content-center items-center gap-3 sm:gap-4 p-4 sm:p-6 overflow-y-auto">
+                        <div class="flex-1 flex flex-wrap justify-center content-center items-center gap-3 sm:gap-5 max-w-xl mx-auto">
                             ${itemsHtml}
                         </div>
                     </div>
                 `;
             } else if (curLvl === 4 || curLvl === 5) {
-                // 【第 4 關 & 第 5 關：聽題目自己畫紅叉叉（第 4 關純非 0；第 5 關加入遇見 0 互動畫叉）】
-                const size = getAdaptiveEmojiSize(minuend);
-                let cleanItemsHtml = '';
+                // 【第 4 關 & 第 5 關：彩色量詞句型引導條 ＋ 聽句型自己畫紅叉叉 ＋ 分步聚光燈】
+                const esz = getEmojiSize(minuend);
+                let itemsHtml = '';
                 for (let i = 0; i < minuend; i++) {
-                    cleanItemsHtml += `
-                        <div id="l4-item-${i}" onclick="tapLevel4Cross(${i})"
-                             class="stage-item-card emoji-pop cursor-pointer transition-transform active:scale-90"
-                             style="font-size:${size}">
-                            <span>${curIcon}</span>
+                    const isCrossed = userCrossedIndices.includes(i);
+                    itemsHtml += `
+                        <div onclick="toggleUserCross(${i})" data-is-remain="${!isCrossed}" class="stage-item-card stage-item-clickable relative ${isCrossed ? 'crossed-red-card' : ''}">
+                            <span style="font-size:${esz};" class="emoji-pop leading-none ${isCrossed ? 'opacity-50' : ''}">${currentItemObj.icon}</span>
+                            ${isCrossed ? `
+                                <svg class="cross-animate absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+                                    <line x1="8" y1="8" x2="92" y2="92" stroke="#EF4444" stroke-width="16" stroke-linecap="round"/>
+                                    <line x1="92" y1="8" x2="8" y2="92" stroke="#EF4444" stroke-width="16" stroke-linecap="round"/>
+                                </svg>
+                            ` : ''}
                         </div>
                     `;
                 }
-                if (minuend === 0) {
-                    cleanItemsHtml = `<div class="text-6xl">🍽️</div>`;
-                }
 
-                const borderTheme = (curLvl === 4) ? 'border-purple-300' : 'border-rose-300';
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white/95 rounded-[2rem] border-4 ${borderTheme} shadow-lg flex flex-col p-3 sm:p-4 overflow-hidden">
-                        <div class="flex items-center justify-between mb-2 shrink-0 gap-1.5 flex-wrap">
-                            <span id="l4-action-badge" class="bg-blue-200 text-blue-950 border-2 border-blue-600 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm">
-                                🔵 步驟1：先數藍框裡「全部」有幾個
+                    <div class="w-full max-w-3xl h-full bg-white/95 rounded-[2rem] border-4 border-white shadow-xl flex flex-col justify-between p-2.5 sm:p-4 relative overflow-hidden">
+                        <!-- 彩色量詞句型引導條（藍＝全部 / 紅＝拿走 / 黃＝剩下） -->
+                        ${sentenceBarHtml}
+
+                        <!-- 互動操作進度提示 -->
+                        <div class="flex items-center justify-between gap-2 my-1 px-1 shrink-0">
+                            <span id="l45-action-badge" class="bg-blue-100 text-blue-900 border-2 border-blue-400 text-xs sm:text-sm font-black px-2.5 py-0.5 rounded-full truncate">
+                                🔵 先數藍框裡「全部」有幾個（已畫叉 ${userCrossedIndices.length}/${subtrahend}）
                             </span>
-                            <div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-black">
-                                <span id="l4-cross-counter" class="bg-red-100 text-red-800 border border-red-400 px-2 py-0.5 rounded-lg">❌ 已畫叉：0 / ${subtrahend}</span>
-                                <span id="l5-yellow-badge" class="bg-slate-100 text-slate-500 border border-slate-300 px-2 py-0.5 rounded-lg transition-all">🟡 黃底＝剩下</span>
-                            </div>
+                            <span id="l45-yellow-badge" class="opacity-35 transition-opacity duration-300 bg-yellow-100 text-yellow-900 border-2 border-yellow-500 text-xs sm:text-sm font-black px-2.5 py-0.5 rounded-full shrink-0">
+                                🟡 黃底＝剩下
+                            </span>
                         </div>
-                        <div id="anim-plate" class="flex-1 bg-blue-200/75 rounded-2xl border-[6px] border-blue-600 shadow-inner flex flex-wrap justify-center content-center items-center gap-3 sm:gap-4 p-4 sm:p-6 overflow-y-auto transition-colors duration-300">
-                            ${cleanItemsHtml}
+
+                        <!-- 藍色粗框大外框 -->
+                        <div id="l45-blue-frame" class="flex-1 w-full rounded-2xl border-[5px] ${colorHintEnabled ? 'border-blue-500 bg-blue-100/80' : 'border-slate-300 bg-slate-50'} transition-colors duration-300 p-2 sm:p-3 flex flex-wrap justify-center content-center items-center gap-2 sm:gap-3 overflow-hidden">
+                            ${itemsHtml}
                         </div>
                     </div>
                 `;
+                updateSpotlightL45();
             } else if (curLvl === 6) {
-                // 【第 6 關：🖐️ 高擬真 SVG 手掌＋真實折手指小幫手（手動點擊＋自動示範雙合一）】
+                // 【第 6 關：🖐️ 高擬真 SVG 手掌＋真實折手指小幫手 ＋ 彩色量詞句型引導條】
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white/95 rounded-[2rem] border-4 border-amber-400 shadow-xl flex flex-col justify-between p-2.5 sm:p-4 overflow-hidden">
-                        <div class="flex items-center justify-between gap-2 shrink-0 mb-1">
-                            <span id="l6-step-badge" class="bg-amber-100 text-amber-950 border-2 border-amber-400 font-black px-2.5 py-1 rounded-xl text-xs sm:text-sm truncate">
+                    <div class="w-full max-w-2xl h-full bg-white/95 rounded-[2rem] border-4 border-amber-400 shadow-xl flex flex-col justify-between p-2 sm:p-3 overflow-hidden">
+                        ${sentenceBarHtml}
+                        <div class="flex items-center justify-between gap-2 shrink-0 my-1">
+                            <span id="l6-step-badge" class="bg-amber-100 text-amber-950 border-2 border-amber-400 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm truncate">
                                 步驟1：點手指伸出 ${minuend} 根 (0/${minuend})
                             </span>
-                            <button onclick="playFingerDemo()" id="btn-finger-demo" class="jelly-btn btn-pink px-3 py-1 text-xs sm:text-sm font-black flex items-center gap-1 shrink-0">
+                            <button onclick="playFingerDemo()" id="btn-finger-demo" class="jelly-btn btn-pink px-3 py-0.5 text-xs sm:text-sm font-black flex items-center gap-1 shrink-0">
                                 <span>▶️</span><span>示範動畫</span>
                             </button>
                         </div>
 
                         <!-- 高擬真左右雙手 SVG 容器 -->
                         <div class="flex-1 flex items-center justify-center gap-3 sm:gap-8 px-1 min-h-0">
-                            <!-- 左手掌 SVG (手指 1~5：大拇指在左，掌心朝前) -->
-                            <div class="flex-1 max-w-[260px] h-full flex flex-col items-center justify-center min-h-0">
-                                <svg id="svg-left-hand" viewBox="0 0 240 245" class="w-full h-full max-h-[210px] overflow-visible select-none">
+                            <!-- 左手掌 SVG -->
+                            <div class="flex-1 max-w-[240px] h-full flex flex-col items-center justify-center min-h-0">
+                                <svg id="svg-left-hand" viewBox="0 0 240 245" class="w-full h-full max-h-[185px] overflow-visible select-none">
                                     <path d="M90 198 L90 236 Q130 242 170 236 L170 198 Z" fill="#FDBA74" stroke="#9A3412" stroke-width="3.5" stroke-linejoin="round" />
                                     <path d="M74 134 C66 155, 76 196, 94 202 L166 202 C186 194, 194 156, 190 122 C188 106, 174 102, 164 104 L96 106 C84 108, 78 120, 74 134 Z"
                                           fill="#FED7AA" stroke="#9A3412" stroke-width="3.5" stroke-linejoin="round" />
@@ -1340,12 +1215,12 @@
                                     <path d="M114 128 Q144 132 168 124" fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round" opacity="0.4" />
                                     <g id="left-fingers-layer"></g>
                                 </svg>
-                                <span class="text-xs sm:text-sm font-black text-amber-950 bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300 -mt-1 shrink-0">🤚 左手 (1～5)</span>
+                                <span class="text-xs font-black text-amber-950 bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300 -mt-1 shrink-0">🤚 左手 (1～5)</span>
                             </div>
 
-                            <!-- 右手掌 SVG (手指 6~10：小指在左、大拇指在右，掌心朝前) -->
-                            <div class="flex-1 max-w-[260px] h-full flex flex-col items-center justify-center min-h-0">
-                                <svg id="svg-right-hand" viewBox="0 0 240 245" class="w-full h-full max-h-[210px] overflow-visible select-none">
+                            <!-- 右手掌 SVG -->
+                            <div class="flex-1 max-w-[240px] h-full flex flex-col items-center justify-center min-h-0">
+                                <svg id="svg-right-hand" viewBox="0 0 240 245" class="w-full h-full max-h-[185px] overflow-visible select-none">
                                     <path d="M70 198 L70 236 Q110 242 150 236 L150 198 Z" fill="#FDBA74" stroke="#9A3412" stroke-width="3.5" stroke-linejoin="round" />
                                     <path d="M166 134 C174 155, 164 196, 146 202 L74 202 C54 194, 46 156, 50 122 C52 106, 66 102, 76 104 L144 106 C156 108, 162 120, 166 134 Z"
                                           fill="#FED7AA" stroke="#9A3412" stroke-width="3.5" stroke-linejoin="round" />
@@ -1353,46 +1228,132 @@
                                     <path d="M126 128 Q96 132 72 124" fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round" opacity="0.4" />
                                     <g id="right-fingers-layer"></g>
                                 </svg>
-                                <span class="text-xs sm:text-sm font-black text-amber-950 bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300 -mt-1 shrink-0">✋ 右手 (6～10)</span>
+                                <span class="text-xs font-black text-amber-950 bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300 -mt-1 shrink-0">✋ 右手 (6～10)</span>
                             </div>
                         </div>
                     </div>
                 `;
                 updateFingerVisuals();
             } else {
-                // 【第 7 關：🧠 純手指心算終極挑戰】
+                // 【第 7 關：無圖片！純手指心算終極挑戰（同步使用同款彩色量詞句型引導條）】
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-gradient-to-br from-rose-50 via-white to-amber-50 rounded-[2rem] border-4 border-rose-400 shadow-xl flex flex-col justify-between p-4 sm:p-6 overflow-hidden">
-                        <div class="flex items-center justify-between shrink-0">
-                            <span class="bg-rose-500 text-white font-black px-3 py-1 rounded-full text-xs sm:text-sm shadow-sm">
-                                🧠 純手指心算終極挑戰（無圖片提示）
-                            </span>
-                            <button onclick="speakCurrentQuestion()" class="bg-amber-200 hover:bg-amber-300 text-amber-950 font-black px-3 py-1 rounded-full text-xs sm:text-sm border-2 border-amber-400 active:scale-95 transition-transform">
-                                🔊 再聽一次題目
-                            </button>
+                    <div class="w-full max-w-3xl h-full bg-gradient-to-br from-amber-50 to-sky-50 rounded-[2rem] border-4 border-amber-300 shadow-xl flex flex-col justify-center items-center p-4 sm:p-6 gap-4 text-center">
+                        <div class="text-5xl sm:text-6xl">🖐️✨</div>
+                        <div onclick="repeatPrompt()" class="cursor-pointer bg-white hover:bg-slate-50 border-4 border-slate-300 rounded-2xl px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-lg sm:text-3xl font-black text-slate-800 shadow-md">
+                            <span>🔊 全部有</span>
+                            <span class="bg-blue-100 text-blue-900 border-2 border-blue-500 px-3 py-1 rounded-xl">${minuend} ${currentItemObj.unit}${currentItemObj.name}</span>
+                            <span>，拿走</span>
+                            <span class="bg-red-100 text-red-900 border-2 border-red-500 px-3 py-1 rounded-xl">${subtrahend} ${currentItemObj.unit}</span>
+                            <span>，剩下</span>
+                            <span id="sentence-remain-pill" class="bg-yellow-100 text-yellow-900 border-2 border-yellow-500 px-3 py-1 rounded-xl">${remVal}</span>
                         </div>
-
-                        <div class="flex-1 flex flex-col justify-center items-center text-center px-2 my-1">
-                            <div class="text-2xl sm:text-4xl font-black text-slate-800 leading-snug sm:leading-relaxed tracking-wide">
-                                全部有 <span class="inline-block bg-amber-200 text-amber-950 px-3 py-0.5 rounded-2xl border-b-4 border-amber-500 text-3xl sm:text-5xl mx-1">${minuend}</span> 個，<br class="sm:hidden">
-                                拿走 <span class="inline-block bg-sky-200 text-sky-950 px-3 py-0.5 rounded-2xl border-b-4 border-sky-500 text-3xl sm:text-5xl mx-1">${subtrahend}</span> 個，<br>
-                                <span class="text-rose-600 mt-1 inline-block">剩下幾個？</span>
-                            </div>
-                        </div>
-
-                        <div class="bg-white/90 border-2 border-amber-300 rounded-2xl py-2 px-4 flex items-center justify-center gap-2 shrink-0 shadow-sm">
-                            <span class="text-2xl sm:text-3xl">🖐️</span>
-                            <span class="text-xs sm:text-base font-black text-amber-900">
-                                伸出你自己的手指頭：先比出 ${minuend}，折下 ${subtrahend} 根手指！
-                            </span>
-                        </div>
+                        <p class="text-sm sm:text-lg font-bold text-slate-600">伸出自己的手指頭數數看，寫出完整算式吧！</p>
                     </div>
                 `;
             }
         }
 
+        // 第 4、5 關：學生聽句型自己點物品畫紅叉叉（含防多畫煞車保護）
+        function toggleUserCross(idx) {
+            if (curLvl !== 4 && curLvl !== 5) return;
+
+            // 如果已經畫過紅叉，允許點一下取消（方便修正）
+            const existingPos = userCrossedIndices.indexOf(idx);
+            if (existingPos !== -1) {
+                playSnd('click');
+                userCrossedIndices.splice(existingPos, 1);
+                renderStage();
+                return;
+            }
+
+            // 如果目標拿走數量是 0（減 0 題型）
+            if (subtrahend === 0) {
+                playSnd('err');
+                l45WrongClicks++;
+                speak('題目說拿走 0 個，一個都不用畫叉叉喔！');
+                return;
+            }
+
+            // 防多畫煞車保護：已畫滿拿走數量時自動擋下
+            if (userCrossedIndices.length >= subtrahend) {
+                playSnd('err');
+                l45WrongClicks++;
+                speak(`停！題目說拿走 ${subtrahend} ${currentItemObj.unit}，已經拿夠囉！`);
+                return;
+            }
+
+            playSnd('pop');
+            userCrossedIndices.push(idx);
+            const countNow = userCrossedIndices.length;
+
+            if (countNow === subtrahend) {
+                speak(`${countNow}，停！拿走 ${subtrahend} ${currentItemObj.unit}了！`);
+                // 若前面「全部」與「-」已填好，自動把游標帶到第 3 格（拿走）
+                if (inputs[0] === String(minuend) && inputs[1] === '-' && inputs[2] === '') {
+                    curSlot = 2;
+                }
+            } else {
+                speak(`${countNow}`);
+            }
+
+            renderStage();
+            renderSlots();
+        }
+
+        // 第 4、5 關：分步視覺聚光燈（填全部時整片藍底無黃光；畫完叉且游標到最後一格時才亮出剩餘黃底）
+        function updateSpotlightL45() {
+            if (curLvl !== 4 && curLvl !== 5) return;
+            const frame = document.getElementById('l45-blue-frame');
+            const yBadge = document.getElementById('l45-yellow-badge');
+            const aBadge = document.getElementById('l45-action-badge');
+            const cards = document.querySelectorAll('#l45-blue-frame .stage-item-card');
+            if (!frame) return;
+
+            const isCrossDone = (userCrossedIndices.length === subtrahend);
+            const showRemainYellow = isCrossDone && (curSlot === 4 || inputs[4] === String(difference));
+
+            if (aBadge) {
+                if (subtrahend === 0) {
+                    aBadge.className = 'bg-amber-100 text-amber-900 border-2 border-amber-400 text-xs sm:text-sm font-black px-2.5 py-0.5 rounded-full truncate';
+                    aBadge.textContent = `✨ 題目拿走 0 ${currentItemObj.unit}，一個都不用畫叉叉喔！`;
+                } else if (!isCrossDone) {
+                    aBadge.className = 'bg-rose-100 text-rose-900 border-2 border-rose-400 text-xs sm:text-sm font-black px-2.5 py-0.5 rounded-full truncate';
+                    aBadge.textContent = `✏️ 點物品畫紅叉叉拿走 ${subtrahend} ${currentItemObj.unit}（目前 ${userCrossedIndices.length}/${subtrahend}）`;
+                } else {
+                    aBadge.className = 'bg-emerald-100 text-emerald-900 border-2 border-emerald-400 text-xs sm:text-sm font-black px-2.5 py-0.5 rounded-full truncate';
+                    aBadge.textContent = `✅ 已拿走 ${subtrahend} ${currentItemObj.unit}！請填完下方算式`;
+                }
+            }
+
+            if (showRemainYellow && colorHintEnabled) {
+                frame.classList.remove('bg-blue-100/80');
+                frame.classList.add('bg-slate-50/90');
+                if (yBadge) {
+                    yBadge.classList.remove('opacity-35');
+                    yBadge.classList.add('opacity-100');
+                }
+                cards.forEach(c => {
+                    if (c.getAttribute('data-is-remain') === 'true') {
+                        c.classList.add('remain-yellow-highlight');
+                    }
+                });
+            } else {
+                if (colorHintEnabled) {
+                    frame.classList.add('bg-blue-100/80');
+                    frame.classList.remove('bg-slate-50/90');
+                } else {
+                    frame.classList.remove('bg-blue-100/80');
+                    frame.classList.add('bg-slate-50');
+                }
+                if (yBadge) {
+                    yBadge.classList.add('opacity-35');
+                    yBadge.classList.remove('opacity-100');
+                }
+                cards.forEach(c => c.classList.remove('remain-yellow-highlight'));
+            }
+        }
+
         // ==================== 第 6 關：高擬真 SVG 手掌模擬器（手動點擊 + 自動示範動畫） ====================
-        // 定義左右手 10 根手指的幾何座標（包含大拇指斜張角度、真實長短與彎折後貼在掌心的座標）
         const HAND_FINGER_SPECS = [
             // 左手 0~4：1大拇指, 2食指, 3中指, 4無名指, 5小指
             { hand: 'left',  num: '1', isThumb: true,  cx: 60,  baseY: 146, len: 54, w: 23, angle: -38, foldY: 148, foldH: 34 },
@@ -1422,15 +1383,12 @@
                     <g onclick="tapFinger(${idx})" class="cursor-pointer ${hintClass}" transform="rotate(${spec.angle}, ${spec.cx}, ${spec.baseY})">
                         <rect x="${spec.cx - r}" y="${topY}" width="${spec.w}" height="${spec.len + 8}" rx="${r}"
                               fill="#FDE047" stroke="#9A3412" stroke-width="3.5" />
-                        <!-- 指甲輪廓 -->
                         <rect x="${spec.cx - nailW / 2}" y="${topY + 5}" width="${nailW}" height="${nailH}" rx="${nailW / 2}"
                               fill="#FEF9C3" opacity="0.9" />
-                        <!-- 兩道真實指節橫紋 -->
                         <line x1="${spec.cx - r + 4}" y1="${topY + spec.len * 0.36}" x2="${spec.cx + r - 4}" y2="${topY + spec.len * 0.36}"
                               stroke="#B45309" stroke-width="2" stroke-linecap="round" opacity="0.5" />
                         <line x1="${spec.cx - r + 4}" y1="${topY + spec.len * 0.66}" x2="${spec.cx + r - 4}" y2="${topY + spec.len * 0.66}"
                               stroke="#B45309" stroke-width="2" stroke-linecap="round" opacity="0.5" />
-                        <!-- 手指編號 -->
                         <text x="${spec.cx}" y="${spec.baseY - 6}" text-anchor="middle" font-size="13" font-weight="900" fill="#78350F">${spec.num}</text>
                     </g>
                 `;
@@ -1440,13 +1398,10 @@
                 const yPos = spec.isThumb ? spec.foldY - 10 : spec.foldY - 6;
                 return `
                     <g onclick="tapFinger(${idx})" class="cursor-pointer" transform="rotate(${foldAngle}, ${spec.cx}, ${spec.baseY})">
-                        <!-- 向下彎折壓在手掌上的手指節 -->
                         <rect x="${spec.cx - r - 1}" y="${yPos}" width="${spec.w + 2}" height="${spec.foldH}" rx="${r}"
                               fill="#FECACA" stroke="#DC2626" stroke-width="3.2" />
-                        <!-- 彎折指節圓弧線 -->
                         <path d="M${spec.cx - r + 3} ${yPos + 12} Q${spec.cx} ${yPos + 16} ${spec.cx + r - 3} ${yPos + 12}"
                               fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" opacity="0.65" />
-                        <!-- 清楚小紅叉 -->
                         <line x1="${spec.cx - 6}" y1="${yPos + spec.foldH - 18}" x2="${spec.cx + 6}" y2="${yPos + spec.foldH - 6}"
                               stroke="#B91C1C" stroke-width="3.2" stroke-linecap="round" />
                         <line x1="${spec.cx + 6}" y1="${yPos + spec.foldH - 18}" x2="${spec.cx - 6}" y2="${yPos + spec.foldH - 6}"
@@ -1454,7 +1409,7 @@
                     </g>
                 `;
             } else {
-                // 【狀態 0：一開始握拳狀態（手指自然彎疊在掌緣上方）】
+                // 【狀態 0：一開始握拳狀態】
                 const fistAngle = spec.isThumb ? (spec.hand === 'left' ? 28 : -28) : 0;
                 const yPos = spec.isThumb ? spec.foldY - 12 : spec.foldY - 12;
                 return `
@@ -1508,406 +1463,230 @@
             }
         }
 
-        function tapFinger(idx) {
+        function tapFinger(idx, isFromDemo = false) {
             if (curLvl !== 6) return;
-            clearL6Timers(); // 若正在自動播放示範，手動點擊則接管控制權
+            if (!isFromDemo) clearDemoTimers();
 
             if (l6Stage === 'extend') {
-                if (fingerStates[idx] === 0 && l6ExtendedCount < minuend) {
-                    playSnd('move');
-                    fingerStates[idx] = 1;
-                    l6ExtendedCount++;
-                    if (l6ExtendedCount === minuend) {
-                        l6Stage = (subtrahend === 0) ? 'done' : 'fold';
-                    }
-                    updateFingerVisuals();
-                } else {
+                if (fingerStates[idx] !== 0) {
                     playSnd('err');
+                    return;
                 }
+                playSnd('pop');
+                fingerStates[idx] = 1;
+                l6ExtendedCount++;
+
+                if (l6ExtendedCount >= minuend) {
+                    l6Stage = 'fold';
+                    speak(`${l6ExtendedCount} 根！現在拿走 ${subtrahend} 根，點手指折下來！`);
+                } else {
+                    speak(`${l6ExtendedCount}`);
+                }
+                updateFingerVisuals();
             } else if (l6Stage === 'fold') {
-                if (fingerStates[idx] === 1 && l6FoldedCount < subtrahend) {
-                    playSnd('stamp');
-                    fingerStates[idx] = 2;
-                    l6FoldedCount++;
-                    if (l6FoldedCount === subtrahend) {
-                        l6Stage = 'done';
-                    }
-                    updateFingerVisuals();
-                } else {
+                if (fingerStates[idx] !== 1) {
                     playSnd('err');
+                    speak('要點亮起來伸直的手指頭折下來喔！');
+                    return;
                 }
+                playSnd('pop');
+                fingerStates[idx] = 2;
+                l6FoldedCount++;
+
+                if (l6FoldedCount >= subtrahend) {
+                    l6Stage = 'done';
+                    speak(`${l6FoldedCount}，停！數數看還剩幾根？`);
+                } else {
+                    speak(`${l6FoldedCount}`);
+                }
+                updateFingerVisuals();
             } else {
                 playSnd('click');
+                speak(`還剩下 ${difference} 根伸直的手指頭，請填答案！`);
             }
         }
 
-        // 老師一鍵播放「自動示範動畫」：先逐根伸出 minuend 根 -> 再逐根折下 subtrahend 根
         function playFingerDemo() {
             if (curLvl !== 6) return;
-            clearL6Timers();
+            clearDemoTimers();
             playSnd('click');
 
-            // 重置雙手狀態並同步播放語音
             fingerStates = Array(10).fill(0);
             l6Stage = 'extend';
             l6ExtendedCount = 0;
             l6FoldedCount = 0;
             updateFingerVisuals();
-            speakText(`先比出 ${minuend} 根手指頭，再拿走 ${subtrahend} 根`);
 
-            let delay = 450;
-            const stepInterval = 420;
+            speak(`看老師示範！先比出 ${minuend} 根手指頭`);
+            let delay = 700;
 
-            // 第一階段：逐根伸直 0 .. minuend-1
             for (let i = 0; i < minuend; i++) {
-                const t = setTimeout(() => {
-                    playSnd('move');
-                    fingerStates[i] = 1;
-                    l6ExtendedCount = i + 1;
-                    if (l6ExtendedCount === minuend) {
-                        l6Stage = (subtrahend === 0) ? 'done' : 'fold';
-                    }
-                    updateFingerVisuals();
-                }, delay);
-                l6AutoTimers.push(t);
-                delay += stepInterval;
+                const idx = i;
+                demoTimers.push(setTimeout(() => {
+                    tapFinger(idx, true);
+                }, delay));
+                delay += 550;
             }
 
-            // 中場停頓 550ms 讓學生看清楚全部手指
-            delay += 550;
+            delay += 500;
 
-            // 第二階段：從最後一根伸直的手指往回逐根折下 subtrahend 根
             for (let k = 0; k < subtrahend; k++) {
-                const targetFinger = minuend - 1 - k;
-                const t = setTimeout(() => {
-                    playSnd('stamp');
-                    fingerStates[targetFinger] = 2;
-                    l6FoldedCount = k + 1;
-                    if (l6FoldedCount === subtrahend) {
-                        l6Stage = 'done';
-                    }
-                    updateFingerVisuals();
-                }, delay);
-                l6AutoTimers.push(t);
-                delay += stepInterval;
+                const foldIdx = minuend - 1 - k;
+                demoTimers.push(setTimeout(() => {
+                    tapFinger(foldIdx, true);
+                }, delay));
+                delay += 650;
             }
         }
 
-        // ==================== 7. 第 1 關雙向操作板互動邏輯 ====================
-        function tapYellowToGreen(idx) {
-            if (curLvl !== 1 || l1Stage !== 'yellowToGreen') return;
-            const yBtn = document.getElementById(`y-item-${idx}`);
-            if (!yBtn || yBtn.dataset.used === 'true') return;
-
-            if (l1GreenCount < minuend) {
-                playSnd('move');
-                yBtn.dataset.used = 'true';
-                yBtn.style.visibility = 'hidden';
-
-                const targetCell = document.getElementById(`g-cell-${l1GreenCount}`);
-                if (targetCell) {
-                    targetCell.innerHTML = `<span id="g-item-${l1GreenCount}" class="drop-into-green">${curIcon}</span>`;
-                }
-                l1GreenCount++;
-
-                const badge = document.getElementById('l1-step-badge');
-                if (l1GreenCount < minuend) {
-                    badge.textContent = `步驟1：拿 ${minuend} 個下來 (${l1GreenCount}/${minuend})`;
-                } else {
-                    l1Stage = 'greenToBlue';
-                    document.getElementById('l1-yellow-zone').classList.remove('active-zone-guide');
-                    document.getElementById('l1-green-zone').classList.add('active-zone-guide');
-                    badge.className = 'bg-sky-200 text-sky-950 border border-sky-500 font-black px-2.5 py-0.5 rounded-full text-xs sm:text-sm shrink-0';
-                    badge.textContent = `步驟2：點下面移走 ${subtrahend} 個 (0/${subtrahend})`;
-                    updateSlotLockState();
-                }
-            }
-        }
-
-        function tapGreenToBlue(cellIdx) {
-            if (curLvl !== 1 || l1Stage !== 'greenToBlue') return;
-            const gItem = document.getElementById(`g-item-${cellIdx}`);
-            if (!gItem || gItem.dataset.moved === 'true') return;
-
-            if (l1BlueCount < subtrahend) {
-                playSnd('move');
-                gItem.dataset.moved = 'true';
-                gItem.style.visibility = 'hidden';
-                l1BlueCount++;
-
-                const blueContainer = document.getElementById('l1-blue-items');
-                const blueChip = document.createElement('span');
-                blueChip.className = 'fly-into-blue p-0.5 rounded-lg bg-white/90 border border-sky-300 shadow-sm leading-none inline-flex items-center justify-center shrink-0';
-                blueChip.style.fontSize = blueContainer.dataset.chipSize || getBoardItemSize(subtrahend);
-                blueChip.textContent = curIcon;
-                blueContainer.appendChild(blueChip);
-
-                const badge = document.getElementById('l1-step-badge');
-                badge.textContent = `步驟2：點下面移走 ${subtrahend} 個 (${l1BlueCount}/${subtrahend})`;
-
-                if (l1BlueCount === subtrahend) {
-                    l1Stage = 'done';
-                    equationUnlocked = true;
-                    document.getElementById('l1-green-zone').classList.remove('active-zone-guide');
-                    badge.className = 'bg-emerald-200 text-emerald-950 border border-emerald-500 font-black px-2.5 py-0.5 rounded-full text-xs sm:text-sm shrink-0';
-                    badge.textContent = '完成移動！請填寫答案';
-                    updateSlotLockState();
-                    renderSlots();
-                }
-            }
-        }
-
-        function updateSlotLockState() {
-            const container = document.getElementById('slot-container');
-            const hint = document.getElementById('slot-hint');
-
-            if (curLvl === 1 && !equationUnlocked) {
-                container.classList.add('slot-disabled');
-                if (l1Stage === 'yellowToGreen') {
-                    hint.textContent = `👆 步驟 1：先從左上方黃色積木堆，點出 ${minuend} 個放進綠色格子！`;
-                } else {
-                    hint.textContent = `👆 步驟 2：現在從綠色格子裡，點出 ${subtrahend} 個移到藍色拿走區！`;
-                }
+        // 第 1 關兩步驟手動操作：步驟1 從左上黃區點下來放進綠色十格板
+        function tapL1Step1() {
+            if (curLvl !== 1 || l1Phase !== 1) return;
+            playSnd('pop');
+            l1PlacedCount++;
+            if (l1PlacedCount >= minuend) {
+                l1Phase = 2;
+                speak(`${l1PlacedCount} 個放好了！現在請從綠色格子裡，拿走 ${subtrahend} 個放到藍色區！`);
             } else {
-                container.classList.remove('slot-disabled');
-                if (curLvl === 1) {
-                    hint.textContent = '✨ 數數看綠色格子裡「剩下」幾個，填進最後一格！';
-                } else if ((curLvl === 2 || curLvl === 3) && !animationTriggered) {
-                    hint.textContent = '👀 先數一數「全部」有幾個，填進第一個方框！';
-                } else if (curLvl === 4 || curLvl === 5) {
-                    hint.textContent = '🔵 先數藍框裡「全部」有幾個，填進第一個藍色框！';
-                } else if (curLvl === 6) {
-                    hint.textContent = `🖐️ 點手指比出 ${minuend} 再折進 ${subtrahend} 根（或按 ▶️ 示範動畫），填入剩下幾個！`;
-                } else if (curLvl === 7) {
-                    hint.textContent = '🧠 伸出你自己的手指頭算一算，把完整減法算式寫下來！';
-                } else {
-                    hint.textContent = '✍️ 看清楚拿走幾個、剩下幾個，完成減法算式！';
-                }
+                speak(`${l1PlacedCount}`);
             }
+            renderStage();
+            renderSlots();
         }
 
-        // ==================== 8. 第 2、3 關兩段式動畫觸發 ====================
-        function triggerLevelAnimation() {
-            if (animationTriggered) return;
-            animationTriggered = true;
-
-            if (curLvl === 2) {
-                playSnd('move');
-                const badge = document.getElementById('l2-status-badge');
-                if (badge) {
-                    badge.className = 'bg-sky-200 text-sky-950 border border-sky-500 font-black px-2.5 py-0.5 rounded-full text-xs sm:text-sm shrink-0';
-                    badge.textContent = `已拿走 ${subtrahend} 個到藍色區！`;
-                }
-
-                const blueContainer = document.getElementById('l2-blue-items');
-                const startIdx = minuend - subtrahend;
-                for (let i = startIdx; i < minuend; i++) {
-                    const gItem = document.getElementById(`l2-g-item-${i}`);
-                    if (gItem) gItem.style.visibility = 'hidden';
-
-                    if (blueContainer) {
-                        const chip = document.createElement('span');
-                        chip.className = 'fly-into-blue p-0.5 rounded-lg bg-white/90 border border-sky-300 shadow-sm leading-none inline-flex items-center justify-center shrink-0';
-                        chip.style.fontSize = blueContainer.dataset.chipSize || getBoardItemSize(subtrahend);
-                        chip.textContent = curIcon;
-                        blueContainer.appendChild(chip);
-                    }
-                }
-            } else if (curLvl === 3) {
-                playSnd('stamp');
-                const startIdx = minuend - subtrahend;
-                for (let i = 0; i < minuend; i++) {
-                    const wrap = document.getElementById(`anim-wrap-${i}`);
-                    if (!wrap) continue;
-
-                    if (i >= startIdx) {
-                        // 被拿走的物品：蓋上超大紅叉叉並套用淡紅卡片底色
-                        wrap.classList.add('crossed-card');
-                        const span = wrap.querySelector('span');
-                        if (span) span.classList.add('opacity-65');
-                        wrap.insertAdjacentHTML('beforeend', getBigCrossSVG());
-                    }
-                }
-            }
-        }
-
-        // ==================== 第 4 關 & 第 5 關：聽題目自己動手畫紅叉叉（含 0 題型引導與防多畫煞車） ====================
-        function tapLevel4Cross(idx) {
-            if (curLvl !== 4 && curLvl !== 5) return;
-
-            // 防呆 1：必須先把「全部有幾個」填對，才能開始拿走畫叉叉
-            if (inputs[0] !== String(minuend)) {
-                playSnd('err');
-                const hint = document.getElementById('slot-hint');
-                if (hint) hint.textContent = '👆 先數一數藍框裡「全部」有幾個，填進第 1 個藍色框喔！';
-                const s0 = document.getElementById('s0');
-                s0.classList.add('animate-shake');
-                setTimeout(() => s0.classList.remove('animate-shake'), 350);
-                return;
-            }
-
-            // 防呆 2：已經畫叉過的不能重複點
-            if (l4CrossedFlags[idx]) {
-                playSnd('err');
-                return;
-            }
-
-            // 防呆 3（煞車機制）：已經拿走夠了（包括拿走 0 個），自動鎖住不讓他多畫
-            if (l4CrossedCount >= subtrahend) {
-                playSnd('err');
-                const hint = document.getElementById('slot-hint');
-                if (hint) {
-                    hint.textContent = (subtrahend === 0)
-                        ? '🛑 停！這題拿走 0 個，一個都不用畫叉叉喔！請在紅色框填 0！'
-                        : `🛑 停！已經拿走 ${subtrahend} 個囉，把 ${subtrahend} 填進紅色框！`;
-                }
-                return;
-            }
-
-            // 蓋上超大紅叉叉並唱數
-            playSnd('stamp');
-            l4CrossedFlags[idx] = true;
-            l4CrossedCount++;
-
-            const card = document.getElementById(`l4-item-${idx}`);
-            if (card) {
-                card.classList.add('crossed-card');
-                const span = card.querySelector('span');
-                if (span) span.classList.add('opacity-65');
-                card.insertAdjacentHTML('beforeend', getBigCrossSVG());
-            }
-
-            const counterEl = document.getElementById('l4-cross-counter');
-            if (counterEl) {
-                counterEl.textContent = `❌ 已畫叉：${l4CrossedCount} / ${subtrahend}`;
-            }
-
-            const badge = document.getElementById('l4-action-badge');
-            const hint = document.getElementById('slot-hint');
-
-            if (l4CrossedCount < subtrahend) {
-                if (badge) {
-                    badge.className = 'bg-rose-100 text-rose-900 border-2 border-rose-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
-                    badge.textContent = `❌ 步驟2：再點物品畫叉叉 (${l4CrossedCount}/${subtrahend})`;
-                }
-                if (hint) {
-                    hint.textContent = `👇 邊點邊數：「${l4CrossedCount}」⋯⋯ 題目要拿走 ${subtrahend} 個！`;
-                }
+        // 第 1 關兩步驟手動操作：步驟2 從綠色十格板拿走放進右上藍色區
+        function tapL1Step2() {
+            if (curLvl !== 1 || l1Phase !== 2 || l1MovedCount >= subtrahend) return;
+            playSnd('pop');
+            l1MovedCount++;
+            if (l1MovedCount >= subtrahend) {
+                l1Phase = 3;
+                speak(`${l1MovedCount}，停！數數看綠色格子裡還剩下幾個？`);
+                setFocus(4, false);
             } else {
-                // 剛好拿走完畢！引導填入紅色框（拿走幾個）
-                if (badge) {
-                    badge.className = 'bg-emerald-100 text-emerald-900 border-2 border-emerald-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
-                    badge.textContent = `🛑 停！拿走 ${subtrahend} 個了，請填進紅色框！`;
-                }
-                if (hint) {
-                    hint.textContent = `✨ 畫好 ${subtrahend} 個紅叉叉了！把 ${subtrahend} 填進紅色框！`;
-                }
-                if (inputs[1] === '') setFocus(1);
-                else if (inputs[2] === '') setFocus(2);
+                speak(`${l1MovedCount}`);
             }
+            renderStage();
+            renderSlots();
         }
 
-        // ==================== 9. 算式防呆框與鍵盤輸入 ====================
+        // ==================== 4. 算式框與輸入邏輯 ====================
         function renderSlots() {
             let stars = '';
-            for (let i = 0; i < questionsPerLevel; i++) {
-                stars += (i < qIndex) ? '⭐' : '☆';
-            }
+            for (let i = 0; i < targetQCount; i++) stars += (i < qDone) ? '⭐' : '☆';
             document.getElementById('star-progress').textContent = stars;
+
+            // 控制算式格下方標籤顯示（第 1~3 關保持簡潔算式框，第 4~6 關顯示全部/拿走/剩下標籤，第 7 關純心算褪除標籤）
+            const showLabels = (curLvl >= 4 && curLvl <= 6);
+            ['lbl-s0', 'lbl-s2', 'lbl-s4'].forEach(id => {
+                const lbl = document.getElementById(id);
+                if (lbl) lbl.style.display = showLabels ? 'block' : 'none';
+            });
 
             for (let i = 0; i < 5; i++) {
                 const el = document.getElementById(`s${i}`);
                 el.textContent = inputs[i];
-                el.classList.remove('slot-focused', 'animate-shake');
+                el.classList.remove('slot-focused', 'animate-shake', 'slot-blue-hint', 'slot-red-hint', 'slot-yellow-hint', 'border-orange-500', 'bg-orange-50', 'border-sky-500', 'bg-sky-50', 'border-emerald-500', 'bg-emerald-50');
+
+                // 全關卡統一視覺顏色：【全部】格子用藍色、【剩餘】格子用黃色
+                if (i === 0) el.classList.add('slot-blue-hint');
+                if (i === 2) el.classList.add('slot-red-hint');
+                if (i === 4) el.classList.add('slot-yellow-hint');
             }
 
-            if (equationUnlocked && !document.getElementById(`s${curSlot}`).classList.contains('slot-locked')) {
-                document.getElementById(`s${curSlot}`).classList.add('slot-focused');
+            const focusedEl = document.getElementById(`s${curSlot}`);
+            if (focusedEl && !focusedEl.classList.contains('slot-locked')) {
+                focusedEl.classList.add('slot-focused');
+            }
+
+            // 同步更新第 4、5 關分步視覺聚光燈與全關卡句型膠囊
+            if (curLvl === 4 || curLvl === 5) {
+                updateSpotlightL45();
+            }
+            const pill = document.getElementById('sentence-remain-pill');
+            if (pill) {
+                pill.textContent = (inputs[4] === String(difference) && inputs[4] !== '') ? `${difference} ${currentItemObj.unit}` : `幾${currentItemObj.unit}？`;
+            }
+
+            if (curLvl === 6) return;
+
+            const hint = document.getElementById('slot-hint');
+            if (curLvl === 1) {
+                if (l1Phase === 1) {
+                    hint.textContent = `👆 步驟 1：先從左上方黃色積木堆，點出 ${minuend} 個放進綠色格子！`;
+                } else if (l1Phase === 2) {
+                    hint.textContent = `👉 步驟 2：從綠色格子裡，點出 ${subtrahend} 個拿走到右上藍色區！`;
+                } else {
+                    hint.textContent = `🔢 數一數綠色格子裡還剩下幾個，填進最後一格！`;
+                }
+            } else if (curLvl === 4 || curLvl === 5) {
+                const isCrossDone = (userCrossedIndices.length === subtrahend);
+                if (curSlot === 0) hint.textContent = '🔵 第1格：看藍色大框框裡，全部有幾個？';
+                else if (curSlot === 1) hint.textContent = '➖ 第2格（圓形）：請點粉紅色的減號（➖）';
+                else if (curSlot === 2) {
+                    hint.textContent = isCrossDone
+                        ? '🔴 第3格：數一數畫了幾個紅叉叉（拿走）？'
+                        : `✏️ 先點上方物品畫出 ${subtrahend} 個紅叉叉，再填第3格！`;
+                }
+                else if (curSlot === 3) hint.textContent = '🟰 第4格（圓形）：請點藍色的等號（🟰）';
+                else if (curSlot === 4) hint.textContent = '🟡 第5格：數一數黃色亮起來的（剩下）有幾個？';
+            } else if (curLvl === 7) {
+                hint.textContent = '🖐️ 看彩色句型提示，用自己的手指頭數出完整算式！';
+            } else {
+                const slotNames = [
+                    '👀 先數一數「全部」有幾個，填進第一個方框！',
+                    '第2格（圓形）：請點粉紅色的減號（➖）',
+                    '👉 數一數「拿走區」有幾個，填進第二個方框！',
+                    '第4格（圓形）：請點藍色的等號（🟰）',
+                    '🔢 數一數綠色格子裡還「剩下」幾個？'
+                ];
+                hint.textContent = slotNames[curSlot] || '請填寫算式';
             }
         }
 
-        function setFocus(idx) {
-            if (!equationUnlocked) {
-                playSnd('err');
-                return;
-            }
-            if (document.getElementById(`s${idx}`).classList.contains('slot-locked')) return;
-            playSnd('click');
+        function setFocus(idx, withSound = true) {
+            const el = document.getElementById(`s${idx}`);
+            if (!el || el.classList.contains('slot-locked')) return;
+            if (withSound) playSnd('click');
             curSlot = idx;
-
-            // 第 4、5 關當填完「全部」準備處理「拿走（第 2 格）」時，更新上方導引徽章提醒聽題目畫叉叉
-            if ((curLvl === 4 || curLvl === 5) && idx === 2 && l4CrossedCount < subtrahend) {
-                const badge = document.getElementById('l4-action-badge');
-                if (badge) {
-                    badge.className = 'bg-rose-100 text-rose-900 border-2 border-rose-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
-                    badge.textContent = `❌ 步驟2：點物品畫出 ${subtrahend} 個紅叉叉！`;
-                }
-                const hint = document.getElementById('slot-hint');
-                if (hint) {
-                    hint.textContent = `👂 聽題目：拿走 ${subtrahend} 個！請點藍框裡的物品畫出 ${subtrahend} 個紅叉叉！`;
-                }
-            }
-
-            // 第 4、5 關分步視覺聚光燈：當游標來到第 4 格（🟡 剩下）時，才把藍色底色淡化並點亮「黃色剩下」卡片！
-            if ((curLvl === 4 || curLvl === 5) && idx === 4) {
-                const plate = document.getElementById('anim-plate');
-                if (plate) {
-                    plate.classList.remove('bg-blue-200/75');
-                    plate.classList.add('bg-blue-50/35');
-                }
-                let remainCount = 0;
-                for (let i = 0; i < minuend; i++) {
-                    if (!l4CrossedFlags[i]) {
-                        remainCount++;
-                        const card = document.getElementById(`l4-item-${i}`);
-                        if (card) card.classList.add('remain-yellow-highlight');
-                    }
-                }
-                const badge = document.getElementById('l4-action-badge');
-                if (badge) {
-                    badge.className = 'bg-yellow-200 text-amber-950 border-2 border-yellow-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
-                    badge.textContent = remainCount === 0
-                        ? '🟡 步驟3：通通被拿走了，剩下 0 個！'
-                        : '🟡 步驟3：數數看亮黃色的剩下幾個！';
-                }
-                const yBadge = document.getElementById('l5-yellow-badge');
-                if (yBadge) {
-                    yBadge.className = 'bg-yellow-200 text-amber-950 border-2 border-yellow-500 px-2 py-0.5 rounded-lg transition-all shadow-sm';
-                }
-                const hint = document.getElementById('slot-hint');
-                if (hint) {
-                    hint.textContent = remainCount === 0
-                        ? '🟡 一個都沒剩下（0 個）！把 0 填進最後一格！'
-                        : '🟡 現在看亮黃色的卡片！數數看「剩下」幾個填進最後一格！';
-                }
-            }
-
             renderSlots();
         }
 
-        function autoNextSlot() {
+        function autoNext() {
             for (let i = curSlot + 1; i < 5; i++) {
                 if (inputs[i] === '' && !document.getElementById(`s${i}`).classList.contains('slot-locked')) {
-                    setFocus(i);
+                    setFocus(i, false);
                     return;
                 }
             }
             for (let i = 0; i < 5; i++) {
                 if (inputs[i] === '' && !document.getElementById(`s${i}`).classList.contains('slot-locked')) {
-                    setFocus(i);
+                    setFocus(i, false);
                     return;
                 }
             }
         }
 
         function inputKey(k) {
-            if (!equationUnlocked) {
+            playSnd('click');
+            document.getElementById('slot-container').classList.remove('animate-shake');
+
+            if (curLvl === 1 && l1Phase < 3) {
                 playSnd('err');
+                if (l1Phase === 1) {
+                    speak(`先從左上方黃色積木堆，點出 ${minuend} 個放進綠色格子喔！`);
+                } else {
+                    speak(`還沒拿走喔！請從綠色格子點出 ${subtrahend} 個放到藍色拿走區！`);
+                }
                 return;
             }
 
-            playSnd('click');
-            document.getElementById('slot-container').classList.remove('animate-shake');
+            // 第 4、5 關：若還沒畫好指定數量的紅叉叉就想填「拿走」或「剩下」，溫柔提醒先畫叉叉
+            if ((curLvl === 4 || curLvl === 5) && userCrossedIndices.length < subtrahend && (curSlot === 2 || curSlot === 4)) {
+                playSnd('err');
+                speak(`先聽句型，點物品畫出 ${subtrahend} 個紅叉叉再填喔！`);
+                return;
+            }
 
             if (k === 'back') {
                 if (inputs[curSlot] !== '') {
@@ -1919,8 +1698,12 @@
                 }
             } else if (k === '-' || k === '=') {
                 if (curSlot === 1 || curSlot === 3) {
-                    inputs[curSlot] = (k === '-') ? '➖' : '🟰';
-                    autoNextSlot();
+                    inputs[curSlot] = k;
+                    autoNext();
+                } else {
+                    playSnd('err');
+                    document.getElementById('slot-container').classList.add('animate-shake');
+                    speak('圓形的格子才填符號喔！');
                 }
             } else {
                 if (curSlot === 0 || curSlot === 2 || curSlot === 4) {
@@ -1935,38 +1718,21 @@
                     if (curSlot === 2) expected = String(subtrahend);
                     if (curSlot === 4) expected = String(difference);
 
-                    // 第 2、3 關：只要第一格「全部有幾個」填對，立刻觸發拿走動畫！
-                    if (curSlot === 0 && inputs[0] === expected && (curLvl === 2 || curLvl === 3)) {
-                        triggerLevelAnimation();
-                        updateSlotLockState();
-                    }
-
-                    // 第 4、5 關：填對「全部」後，引導他聽題目親手畫紅叉叉（遇見拿走 0 個則特別提示不用畫叉）
-                    if (curSlot === 0 && inputs[0] === expected && (curLvl === 4 || curLvl === 5)) {
-                        const badge = document.getElementById('l4-action-badge');
-                        const hint = document.getElementById('slot-hint');
-                        if (subtrahend === 0) {
-                            if (badge) {
-                                badge.className = 'bg-emerald-100 text-emerald-900 border-2 border-emerald-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
-                                badge.textContent = '✨ 拿走 0 個！一個都不用畫叉叉喔！';
-                            }
-                            if (hint) {
-                                hint.textContent = '✨ 拿走 0 個！一個都不用畫叉叉喔！繼續完成減法算式！';
-                            }
-                        } else {
-                            if (badge) {
-                                badge.className = 'bg-rose-100 text-rose-900 border-2 border-rose-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
-                                badge.textContent = `❌ 步驟2：點物品畫出 ${subtrahend} 個紅叉叉！`;
-                            }
-                            if (hint) {
-                                hint.textContent = `👂 聽題目：拿走 ${subtrahend} 個！請點藍框裡的物品畫出 ${subtrahend} 個紅叉叉！`;
-                            }
-                        }
+                    // 第 2、3 關兩段式視覺鷹架：填對「全部」後觸發動畫
+                    if (curSlot === 0 && inputs[0] === expected && (curLvl === 2 || curLvl === 3) && !stageActionTriggered) {
+                        stageActionTriggered = true;
+                        playSnd('pop');
+                        renderStage();
+                        speak(`全部有 ${minuend} 個，現在拿走 ${subtrahend} 個！`);
                     }
 
                     if (inputs[curSlot] === expected || inputs[curSlot].length === 2) {
-                        autoNextSlot();
+                        autoNext();
                     }
+                } else {
+                    playSnd('err');
+                    document.getElementById('slot-container').classList.add('animate-shake');
+                    speak('這裡要填減號或等號喔！');
                 }
             }
 
@@ -1974,106 +1740,81 @@
             checkWin();
         }
 
-        function recordAttemptLog(isFirstTryCorrect) {
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            practiceLogs.unshift({
-                time: timeStr,
-                level: curLvl,
-                levelName: LEVEL_NAMES[curLvl],
-                equation: `${minuend} - ${subtrahend} = ${difference}`,
-                firstTryCorrect: isFirstTryCorrect,
-                wrongInputs: [...currentQWrongAttempts]
-            });
-            if (practiceLogs.length > 100) practiceLogs.pop();
-            saveLogs();
-        }
-
         function checkWin() {
             if (inputs.includes('')) return;
 
-            const isCorrect = (
-                inputs[0] === String(minuend) &&
-                inputs[1] === '➖' &&
-                inputs[2] === String(subtrahend) &&
-                inputs[3] === '🟰' &&
-                inputs[4] === String(difference)
+            const ok = (
+                Number(inputs[0]) === minuend &&
+                inputs[1] === '-' &&
+                Number(inputs[2]) === subtrahend &&
+                inputs[3] === '=' &&
+                Number(inputs[4]) === difference
             );
 
-            if (isCorrect) {
+            if (ok) {
+                clearDemoTimers();
                 playSnd('win');
-                recordAttemptLog(currentQWrongAttempts.length === 0);
-                qIndex++;
+                saveQuestionRecord(curLvl, `${minuend} - ${subtrahend} = ${difference}`, wrongAttemptsInQuestion);
+                qDone++;
                 renderSlots();
                 document.getElementById('s4').classList.remove('slot-focused');
 
-                if (qIndex >= questionsPerLevel) {
-                    const subEl = document.getElementById('clear-modal-subtitle');
-                    if (subEl) {
-                        subEl.textContent = `⭐ 收集滿 ${questionsPerLevel} 顆星星囉！請舉手跟老師說：`;
-                    }
+                const eqText = `${minuend} 減 ${subtrahend} 等於 ${difference}`;
+                document.getElementById('success-equation-banner').textContent = `${minuend}  ➖  ${subtrahend}  🟰  ${difference}`;
+                speak(`答對了！${eqText}`);
+
+                if (qDone >= targetQCount) {
+                    confetti({ particleCount: 110, spread: 75, origin: { y: 0.6 } });
+                    const starNumEl = document.getElementById('clear-star-num');
+                    if (starNumEl) starNumEl.textContent = targetQCount;
                     document.getElementById('modal-clear').classList.remove('hidden');
                     document.getElementById('modal-clear').classList.add('flex');
-                    setTimeout(() => speakFinishPhrase(), 350);
+                    setTimeout(() => {
+                        speak('老師！我完成了！');
+                    }, 900);
                 } else {
-                    const overlay = document.getElementById('overlay-next');
-                    overlay.classList.remove('hidden');
-                    overlay.classList.add('flex');
+                    confetti({ particleCount: 45, spread: 55, origin: { y: 0.78 } });
+                    document.getElementById('overlay-next').classList.remove('hidden');
+                    document.getElementById('overlay-next').classList.add('flex');
                 }
             } else {
-                // 雙位數前綴防呆：正在打正確十位數時不報錯
                 if (curSlot === 0 && String(minuend).startsWith(inputs[0]) && inputs[0] !== String(minuend)) return;
                 if (curSlot === 2 && String(subtrahend).startsWith(inputs[2]) && inputs[2] !== String(subtrahend)) return;
                 if (curSlot === 4 && String(difference).startsWith(inputs[4]) && inputs[4] !== String(difference)) return;
 
-                const attemptStr = `${inputs[0] || '?'}${inputs[1] || '?'}${inputs[2] || '?'}${inputs[3] || '?'}${inputs[4] || '?'}`;
-                if (currentQWrongAttempts[currentQWrongAttempts.length - 1] !== attemptStr) {
-                    currentQWrongAttempts.push(attemptStr);
-                }
-
+                wrongAttemptsInQuestion++;
                 playSnd('err');
                 document.getElementById('slot-container').classList.add('animate-shake');
+                speak('再數數看喔！');
             }
         }
 
         function nextQ() {
             playSnd('click');
-            loadQuestion();
+            genQ();
         }
 
         function finishLevel() {
+            clearDemoTimers();
             playSnd('click');
             document.getElementById('modal-clear').classList.add('hidden');
             document.getElementById('modal-clear').classList.remove('flex');
-            if (unlockedLvl === curLvl && unlockedLvl < 7) {
-                unlockedLvl++;
-            }
+            if (maxLvl === curLvl && maxLvl < 7) maxLvl++;
             goMap();
+            updateMap();
         }
 
-        // ==================== 10. 老師後台設定 Modal ====================
-        function setPresetMinuend(val) {
-            playSnd('click');
-            document.getElementById('setting-max-minuend').value = val;
-        }
-        function setPresetSubtrahend(val) {
-            playSnd('click');
-            document.getElementById('setting-max-subtrahend').value = val;
-        }
-        function setPresetQCount(val) {
-            playSnd('click');
-            document.getElementById('setting-q-per-level').value = val;
-        }
-
+        // ==================== 5. 老師專用設定與學習紀錄 ====================
         function openSettings() {
             playSnd('click');
-            document.getElementById('setting-max-minuend').value = maxMinuend;
-            document.getElementById('setting-max-subtrahend').value = maxSubtrahend;
-            document.getElementById('setting-level').value = unlockedLvl;
-            document.getElementById('setting-q-per-level').value = questionsPerLevel;
-            document.getElementById('setting-lvl5-mix').checked = level5MixNonZero;
             document.getElementById('modal-settings').classList.remove('hidden');
             document.getElementById('modal-settings').classList.add('flex');
+            document.getElementById('setting-max').value = globalMaxMinuend;
+            document.getElementById('setting-qcount').value = targetQCount;
+            document.getElementById('setting-level').value = maxLvl;
+            document.getElementById('setting-lvl5-mix').checked = level5MixNormal;
+            document.getElementById('setting-color-hint').checked = colorHintEnabled;
+            document.getElementById('setting-voice').checked = voiceEnabled;
         }
 
         function closeSettings() {
@@ -2084,40 +1825,127 @@
         }
 
         function applySettings() {
-            const newMinuend = parseInt(document.getElementById('setting-max-minuend').value, 10);
-            const newSub = parseInt(document.getElementById('setting-max-subtrahend').value, 10);
+            const newMax = parseInt(document.getElementById('setting-max').value, 10);
+            const newQCount = parseInt(document.getElementById('setting-qcount').value, 10);
             const newLvl = parseInt(document.getElementById('setting-level').value, 10);
-            const newQCount = parseInt(document.getElementById('setting-q-per-level').value, 10);
-            level5MixNonZero = document.getElementById('setting-lvl5-mix').checked;
+            level5MixNormal = document.getElementById('setting-lvl5-mix').checked;
+            colorHintEnabled = document.getElementById('setting-color-hint').checked;
+            voiceEnabled = document.getElementById('setting-voice').checked;
 
-            if (!isNaN(newMinuend) && newMinuend >= 2 && newMinuend <= 50) {
-                maxMinuend = newMinuend;
+            if (!isNaN(newMax) && newMax >= 5 && newMax <= 20) {
+                globalMaxMinuend = newMax;
             }
-            if (!isNaN(newSub) && newSub >= 1 && newSub <= 50) {
-                maxSubtrahend = Math.min(newSub, maxMinuend);
+            if (!isNaN(newQCount) && newQCount >= 1 && newQCount <= 10) {
+                targetQCount = newQCount;
             }
             if (!isNaN(newLvl) && newLvl >= 1 && newLvl <= 7) {
-                unlockedLvl = newLvl;
+                maxLvl = newLvl;
+                curLvl = newLvl;
             }
-            if (!isNaN(newQCount) && newQCount >= 1 && newQCount <= 15) {
-                questionsPerLevel = newQCount;
-            }
-
             closeSettings();
-            updateMapUI();
+            updateMap();
         }
 
-        // ==================== 11. 學生學習紀錄與錯題分析 Modal ====================
-        let clearConfirmPending = false;
+        function saveQuestionRecord(lvl, equationStr, mistakes) {
+            try {
+                const key = 'subtraction_park_records_v1';
+                const list = JSON.parse(localStorage.getItem(key) || '[]');
+                const now = new Date();
+                const timeStr = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                list.unshift({
+                    time: timeStr,
+                    levelName: LEVEL_NAMES[lvl],
+                    equation: equationStr,
+                    maxNum: globalMaxMinuend,
+                    colorHint: colorHintEnabled,
+                    mistakes: mistakes
+                });
+                localStorage.setItem(key, JSON.stringify(list.slice(0, 100)));
+            } catch (e) {}
+        }
+
+        function copyRecordsToNotion() {
+            playSnd('click');
+            const toast = document.getElementById('copy-notion-toast');
+            try {
+                const list = JSON.parse(localStorage.getItem('subtraction_park_records_v1') || '[]');
+                if (list.length === 0) {
+                    if (toast) {
+                        toast.className = 'bg-amber-100 border-2 border-amber-400 text-amber-900 text-sm font-black text-center py-2 px-3 rounded-xl mb-3';
+                        toast.textContent = '⚠️ 目前還沒有作答紀錄可以複製喔！';
+                        toast.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                // 產生 Notion 可直接轉成表格的 Markdown 格式（逐題紀錄）
+                const lines = [
+                    `### 🎡 減法遊樂園逐題學習紀錄（角色：${charName} ${charEmoji}）`,
+                    ``,
+                    `| 時間 | 關卡名稱 | 題目算式 | 色彩提示 | 作答表現 |`,
+                    `| :--- | :--- | :---: | :---: | :--- |`
+                ];
+
+                list.forEach(r => {
+                    const eqText = r.equation ? `\`${r.equation}\`` : '整關完成';
+                    const colorText = (r.colorHint === false) ? '已褪除' : '開啟';
+                    const perfText = r.mistakes === 0 ? '🌟 一次答對' : `修正 ${r.mistakes} 次`;
+                    lines.push(`| ${r.time} | ${r.levelName} | ${eqText} | ${colorText} | ${perfText} |`);
+                });
+
+                const textToCopy = lines.join('\n');
+                const textarea = document.createElement('textarea');
+                textarea.value = textToCopy;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                playSnd('pop');
+                if (toast) {
+                    toast.className = 'bg-emerald-100 border-2 border-emerald-400 text-emerald-900 text-sm font-black text-center py-2 px-3 rounded-xl mb-3';
+                    toast.textContent = `✅ 已複製 ${list.length} 筆逐題紀錄！直接到 Notion 按貼上即可！`;
+                    toast.classList.remove('hidden');
+                }
+            } catch (e) {
+                if (toast) {
+                    toast.className = 'bg-rose-100 border-2 border-rose-400 text-rose-900 text-sm font-black text-center py-2 px-3 rounded-xl mb-3';
+                    toast.textContent = '⚠️ 複製失敗，請再試一次';
+                    toast.classList.remove('hidden');
+                }
+            }
+        }
 
         function openRecords() {
             playSnd('click');
-            clearConfirmPending = false;
-            const clearBtn = document.getElementById('btn-clear-records');
-            clearBtn.textContent = '🗑️ 清除紀錄';
-            clearBtn.className = 'bg-rose-100 text-rose-700 border-2 border-rose-300 text-sm sm:text-base font-black py-3 px-4 rounded-2xl active:scale-95 transition-transform';
-
-            renderRecordsUI();
+            const toast = document.getElementById('copy-notion-toast');
+            if (toast) toast.classList.add('hidden');
+            const container = document.getElementById('records-list');
+            try {
+                const list = JSON.parse(localStorage.getItem('subtraction_park_records_v1') || '[]');
+                if (list.length === 0) {
+                    container.innerHTML = `<div class="text-center text-slate-400 font-bold py-8">目前還沒有作答紀錄，快去闖關吧！</div>`;
+                } else {
+                    container.innerHTML = list.map(r => `
+                        <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-3 flex items-center justify-between gap-2">
+                            <div>
+                                <div class="font-black text-sky-900 text-base flex items-center gap-2">
+                                    <span>${r.levelName}</span>
+                                    ${r.equation ? `<span class="bg-white border border-sky-300 text-indigo-700 px-2 py-0.5 rounded-lg text-sm">${r.equation}</span>` : ''}
+                                </div>
+                                <div class="text-xs font-bold text-slate-500 mt-0.5">${r.time} ・ 色彩提示：${r.colorHint === false ? '已褪除' : '開啟'}</div>
+                            </div>
+                            <span class="px-3 py-1 rounded-xl text-xs font-black shrink-0 ${r.mistakes === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                ${r.mistakes === 0 ? '🌟 一次答對' : `修正 ${r.mistakes} 次`}
+                            </span>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                container.innerHTML = `<div class="text-center text-slate-400 font-bold py-8">無法讀取紀錄</div>`;
+            }
             document.getElementById('modal-records').classList.remove('hidden');
             document.getElementById('modal-records').classList.add('flex');
         }
@@ -2128,98 +1956,10 @@
             document.getElementById('modal-records').classList.remove('flex');
         }
 
-        function renderRecordsUI() {
-            const total = practiceLogs.length;
-            const firstTryCount = practiceLogs.filter(l => l.firstTryCorrect).length;
-            const errorCount = total - firstTryCount;
-            const accuracy = total === 0 ? '--%' : `${Math.round((firstTryCount / total) * 100)}%`;
-
-            document.getElementById('stat-total').textContent = `${total} 題`;
-            document.getElementById('stat-accuracy').textContent = accuracy;
-            document.getElementById('stat-errors').textContent = `${errorCount} 題`;
-
-            const listEl = document.getElementById('records-list');
-            if (total === 0) {
-                listEl.innerHTML = `<div class="text-center text-slate-400 font-bold py-10">目前尚無答題紀錄，開始闖關後會自動記錄在這裡喔！</div>`;
-                return;
-            }
-
-            listEl.innerHTML = practiceLogs.map(log => {
-                const badge = log.firstTryCorrect
-                    ? `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black px-2 py-0.5 rounded-full">✅ 一次答對</span>`
-                    : `<span class="bg-rose-100 text-rose-800 border border-rose-300 text-xs font-black px-2 py-0.5 rounded-full">⚠️ 曾答錯 (${log.wrongInputs.length}次)</span>`;
-
-                const errDetail = log.wrongInputs.length > 0
-                    ? `<div class="text-xs font-bold text-rose-600 mt-1">誤填紀錄：${log.wrongInputs.join(' 、 ')}</div>`
-                    : '';
-
-                return `
-                    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold text-slate-400">${log.time}</span>
-                                <span class="text-xs font-black text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md">${log.levelName}</span>
-                            </div>
-                            ${badge}
-                        </div>
-                        <div class="text-lg font-black text-slate-800 mt-1">題目算式：${log.equation}</div>
-                        ${errDetail}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function requestClearRecords() {
+        function clearRecords() {
             playSnd('click');
-            const btn = document.getElementById('btn-clear-records');
-            if (!clearConfirmPending) {
-                clearConfirmPending = true;
-                btn.textContent = '⚠️ 再按一次確認清空';
-                btn.className = 'bg-rose-600 text-white border-2 border-rose-700 text-sm sm:text-base font-black py-3 px-4 rounded-2xl active:scale-95 transition-transform';
-            } else {
-                practiceLogs = [];
-                saveLogs();
-                clearConfirmPending = false;
-                btn.textContent = '🗑️ 清除紀錄';
-                btn.className = 'bg-rose-100 text-rose-700 border-2 border-rose-300 text-sm sm:text-base font-black py-3 px-4 rounded-2xl active:scale-95 transition-transform';
-                renderRecordsUI();
-            }
-        }
-
-        function copyRecordsForNotion() {
-            playSnd('click');
-            const total = practiceLogs.length;
-            const firstTryCount = practiceLogs.filter(l => l.firstTryCorrect).length;
-            const accuracy = total === 0 ? '0%' : `${Math.round((firstTryCount / total) * 100)}%`;
-
-            let summary = `📊 減法遊樂園學習紀錄（被減數上限:${maxMinuend} / 減數上限:${maxSubtrahend} / 每關${questionsPerLevel}題）\n`;
-            summary += `- 累計完成：${total} 題｜一次答對率：${accuracy}\n`;
-
-            const wrongLogs = practiceLogs.filter(l => !l.firstTryCorrect);
-            if (wrongLogs.length > 0) {
-                summary += `- 需加強錯題明細：\n`;
-                wrongLogs.forEach(w => {
-                    summary += `  • [${w.levelName}] 題目 ${w.equation}（誤填：${w.wrongInputs.join(', ')}）\n`;
-                });
-            } else {
-                summary += `- 表現超棒，目前全部題目皆一次答對！\n`;
-            }
-
-            const textarea = document.createElement('textarea');
-            textarea.value = summary;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                const btn = document.getElementById('btn-copy-notion');
-                btn.textContent = '✅ 已複製！可直接貼回 Notion';
-                setTimeout(() => {
-                    btn.textContent = '📋 一鍵複製紀錄（貼入 Notion）';
-                }, 2500);
-            } catch (e) {}
-            document.body.removeChild(textarea);
+            try { localStorage.removeItem('subtraction_park_records_v1'); } catch (e) {}
+            openRecords();
         }
     </script>
 </body>
