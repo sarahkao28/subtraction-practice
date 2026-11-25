@@ -417,12 +417,12 @@
                 <button id="node-5" onclick="startLevel(5)" class="map-node node-locked">
                     <span class="text-base sm:text-xl">5</span>
                 </button>
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-slate-700 shadow border-2 border-sky-200">👑 靜態打叉＋色彩提示</span>
+                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-slate-700 shadow border-2 border-sky-200">🍽️ 遇見 0＋互動畫叉綜合</span>
             </div>
 
             <!-- 第 4 關 -->
             <div class="flex items-center gap-2.5 z-10" style="margin-right: 48px;">
-                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-slate-700 shadow border-2 border-sky-200">🍽️ 遇見 0＋色彩提示</span>
+                <span class="bg-white/95 px-2.5 py-1 rounded-xl font-black text-xs sm:text-sm text-slate-700 shadow border-2 border-sky-200">✏️ 聽題目自己畫叉叉</span>
                 <button id="node-4" onclick="startLevel(4)" class="map-node node-locked">
                     <span class="text-base sm:text-xl">4</span>
                 </button>
@@ -665,14 +665,14 @@
                     </div>
                 </div>
 
-                <!-- 第 5 關是否包含 0 的題目 -->
+                <!-- 第 5 關是否混入一般（非 0）題目 -->
                 <div class="bg-rose-50 p-4 rounded-2xl border-2 border-rose-300 flex items-center justify-between cursor-pointer"
-                     onclick="document.getElementById('setting-lvl5-zero').click()">
+                     onclick="document.getElementById('setting-lvl5-mix').click()">
                     <div>
-                        <label class="text-base sm:text-lg font-black text-rose-950 block cursor-pointer">第 5 關包含「0」的題目</label>
-                        <span class="text-xs font-bold text-rose-700">關閉時第 5 關只出一般減法（不減 0、不減光）</span>
+                        <label class="text-base sm:text-lg font-black text-rose-950 block cursor-pointer">第 5 關混入一般（非 0）題目</label>
+                        <span class="text-xs font-bold text-rose-700">關閉＝純練 0 題型（減 0 與全部減光）；開啟＝0 與一般減法混合練習</span>
                     </div>
-                    <input type="checkbox" id="setting-lvl5-zero" onclick="event.stopPropagation()"
+                    <input type="checkbox" id="setting-lvl5-mix" onclick="event.stopPropagation()"
                            class="w-6 h-6 accent-rose-600 rounded cursor-pointer shrink-0">
                 </div>
             </div>
@@ -833,7 +833,7 @@
         let maxMinuend = 10;           // 教師設定：被減數（全部）上限（5~50）
         let maxSubtrahend = 10;        // 教師設定：減數（拿走）上限（1~50）
         let questionsPerLevel = 5;     // 教師設定：每關題數（1~15 題，預設 5 題）
-        let level5IncludeZero = false; // 教師設定：第 5 關是否包含 0 的題目（預設先不出 0）
+        let level5MixNonZero = false;  // 教師設定：第 5 關是否把非 0 題目放進來一起混練（false=純練0題型, true=0與一般減法混練）
         let unlockedLvl = 1;
         let curLvl = 1;
         let qIndex = 0;
@@ -853,9 +853,13 @@
         let l1GreenCount = 0;
         let l1BlueCount = 0;
 
-        // 第 2~4 關狀態
+        // 第 2、3、5 關狀態
         let animationTriggered = false;
         let equationUnlocked = false;
+
+        // 第 4 關：聽題目自己畫紅叉叉狀態
+        let l4CrossedCount = 0;
+        let l4CrossedFlags = [];
 
         // 第 6 關：互動手指模擬器狀態（0: 握拳未伸, 1: 伸直亮起, 2: 折下拿走）
         let fingerStates = Array(10).fill(0);
@@ -871,8 +875,8 @@
             1: '第 1 關：動手拿積木操作板',
             2: '第 2 關：操作板動畫＋列式',
             3: '第 3 關：紅叉叉動畫＋列式',
-            4: '第 4 關：遇見 0＋色彩提示',
-            5: '第 5 關：靜態打叉＋色彩提示',
+            4: '第 4 關：✏️ 聽題目自己畫叉叉',
+            5: '第 5 關：🍽️ 遇見 0＋互動畫叉綜合',
             6: '第 6 關：🖐️ 手指頭小幫手',
             7: '第 7 關：🧠 純手指心算終極挑戰'
         };
@@ -937,16 +941,15 @@
             for (let total = 1; total <= effMaxMinuend; total++) {
                 const upperTake = Math.min(total, effMaxSub);
                 for (let take = 0; take <= upperTake; take++) {
-                    if (lvl === 1 || lvl === 2 || lvl === 3) {
+                    if (lvl === 1 || lvl === 2 || lvl === 3 || lvl === 4) {
+                        // 第 1～4 關：嚴格排除所有 0 題型（減數 >= 1 且 差 >= 1）
                         if (take >= 1 && take < total) pool.push([total, take]);
-                    } else if (lvl === 4) {
-                        // 第 4 關：專門練習「遇見 0」（拿走 0 個，或全部拿走剩下 0 個）
-                        if (take === 0 || take === total) pool.push([total, take]);
                     } else if (lvl === 5) {
-                        // 第 5 關：依老師後台開關決定是否包含 0 的題目
-                        if (level5IncludeZero) {
+                        // 第 5 關：遇見 0 互動畫叉（可設定「純 0 專練」或「0 與非 0 混合練習」）
+                        const isZeroCase = (take === 0 || take === total);
+                        if (level5MixNonZero) {
                             pool.push([total, take]);
-                        } else if (take >= 1 && take < total) {
+                        } else if (isZeroCase) {
                             pool.push([total, take]);
                         }
                     } else if (lvl === 7) {
@@ -1030,6 +1033,10 @@
             animationTriggered = false;
             equationUnlocked = (curLvl !== 1);
 
+            // 重置第 4、5 關自己畫叉叉狀態
+            l4CrossedCount = 0;
+            l4CrossedFlags = Array(total).fill(false);
+
             // 重置第 6 關手指狀態
             fingerStates = Array(10).fill(0);
             l6Stage = 'extend';
@@ -1077,7 +1084,7 @@
                 btnEq.disabled = true;
                 curSlot = 0;
             } else if (curLvl === 4 || curLvl === 5) {
-                // 第 4、5 關：褪除符號提示，並套用紙本同款「藍／紅／黃」色彩視覺提示！
+                // 第 4、5 關：全空白防呆框 + 紙本同款「藍／紅／黃」色彩提示框
                 inputs = ['', '', '', '', ''];
                 btnMinus.disabled = false;
                 btnEq.disabled = false;
@@ -1089,7 +1096,7 @@
                 });
                 curSlot = 0;
             } else {
-                // 第 7 關（純手指心算終極挑戰）：全空白獨立列式
+                // 第 7 關：全空白防呆框（學生自行填寫所有數字與 ➖、🟰）
                 inputs = ['', '', '', '', ''];
                 btnMinus.disabled = false;
                 btnEq.disabled = false;
@@ -1099,189 +1106,156 @@
             updateSlotLockState();
             renderSlots();
 
-            setTimeout(() => speakCurrentQuestion(), 250);
+            // 載入題目後自動語音報讀：「全部有幾個，拿走幾個，剩下幾個？」
+            setTimeout(() => speakCurrentQuestion(), 260);
         }
 
-        // 第 1 關與第 2 關操作板專用動態尺寸（預留充足邊距防重疊）
         function getBoardItemSize(count) {
-            if (count > 32) return 'clamp(0.62rem, 1.4vw, 0.82rem)';
-            if (count > 24) return 'clamp(0.72rem, 1.65vw, 0.96rem)';
-            if (count > 16) return 'clamp(0.85rem, 2vw, 1.15rem)';
-            if (count > 10) return 'clamp(1rem, 2.5vw, 1.4rem)';
-            if (count > 6)  return 'clamp(1.2rem, 3vw, 1.68rem)';
-            return 'clamp(1.45rem, 3.7vw, 2.05rem)';
+            if (count > 35) return 'clamp(0.75rem, 1.8vw, 1rem)';
+            if (count > 24) return 'clamp(0.85rem, 2.2vw, 1.15rem)';
+            if (count > 16) return 'clamp(1rem, 2.6vw, 1.35rem)';
+            if (count > 10) return 'clamp(1.15rem, 3vw, 1.55rem)';
+            return 'clamp(1.35rem, 3.6vw, 1.9rem)';
         }
 
         function renderStage() {
             const wrapper = document.getElementById('stage-wrapper');
 
             if (curLvl === 1) {
-                // 【第 1 關：雙向動手操作板】
-                const extraItems = Math.min(3, Math.max(2, Math.ceil(minuend * 0.2)));
-                const yellowTotalSupply = minuend + extraItems;
-                const supplySize = getBoardItemSize(yellowTotalSupply);
-                const blueChipSize = getBoardItemSize(subtrahend);
+                // 【第 1 關：雙向操作板（黃區多放幾個 -> 點拿全部進綠格 -> 再點拿走移進藍區）】
+                const decoyExtra = Math.min(4, Math.max(2, Math.ceil(minuend * 0.25)));
+                const yellowPoolCount = minuend + decoyExtra;
+                const ySize = getBoardItemSize(yellowPoolCount);
 
-                let yellowHtml = '';
-                for (let i = 0; i < yellowTotalSupply; i++) {
-                    yellowHtml += `
+                let yellowItemsHtml = '';
+                for (let i = 0; i < yellowPoolCount; i++) {
+                    yellowItemsHtml += `
                         <button id="y-item-${i}" onclick="tapYellowToGreen(${i})"
-                                class="emoji-pop p-1 rounded-lg bg-white/95 border border-amber-300 hover:bg-white shadow-sm active:scale-90 transition-transform leading-none flex items-center justify-center shrink-0"
-                                style="font-size:${supplySize}">
+                                class="emoji-pop p-0.5 sm:p-1 rounded-lg bg-white/95 border border-amber-300 shadow-sm active:scale-90 transition-transform leading-none inline-flex items-center justify-center shrink-0"
+                                style="font-size:${ySize}">
                             ${curIcon}
                         </button>
                     `;
                 }
 
+                // 綠色格子依據被減數自動規劃列數（5 個一排，支援超過 10 的多排十格陣）
                 const totalCells = Math.max(10, Math.ceil(minuend / 5) * 5);
                 const rowCount = Math.ceil(totalCells / 5);
-                let cellHeightClass = 'h-7 sm:h-9';
-                let cellEmojiSize = 'clamp(1.05rem, 3vw, 1.55rem)';
-                if (rowCount === 3) {
-                    cellHeightClass = 'h-5 sm:h-7';
-                    cellEmojiSize = 'clamp(0.85rem, 2.3vw, 1.25rem)';
-                } else if (rowCount >= 4) {
-                    cellHeightClass = 'h-4 sm:h-5';
-                    cellEmojiSize = 'clamp(0.66rem, 1.75vw, 0.95rem)';
-                }
+                const gSize = getBoardItemSize(totalCells);
+                const bSize = getBoardItemSize(subtrahend);
 
                 let greenCellsHtml = '';
-                for (let i = 0; i < totalCells; i++) {
+                for (let c = 0; c < totalCells; c++) {
                     greenCellsHtml += `
-                        <div id="g-cell-${i}" onclick="tapGreenToBlue(${i})"
-                             class="bg-white border border-slate-700 rounded flex items-center justify-center ${cellHeightClass} p-0.5 cursor-pointer transition-transform active:scale-90 overflow-hidden"
-                             style="font-size:${cellEmojiSize}">
+                        <div id="g-cell-${c}" onclick="tapGreenToBlue(${c})"
+                             class="bg-white border border-slate-500 rounded-md flex items-center justify-center cursor-pointer active:bg-emerald-50 min-h-0 overflow-hidden"
+                             style="font-size:${gSize}">
                         </div>
                     `;
                 }
 
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white border-4 border-slate-800 rounded-2xl shadow-xl flex flex-col overflow-hidden">
-                        <div class="bg-white px-3 py-1.5 border-b-2 border-slate-800 flex items-center justify-between shrink-0 gap-2">
-                            <span class="text-xs sm:text-base font-black text-slate-800 truncate">
-                                全部有 <strong class="text-amber-600 text-sm sm:text-lg">${minuend}</strong> 個，拿走 <strong class="text-sky-600 text-sm sm:text-lg">${subtrahend}</strong> 個，剩下幾個？
-                            </span>
-                            <span id="l1-step-badge" class="bg-rose-100 text-rose-900 border-2 border-rose-500 font-black px-2.5 py-0.5 rounded-full text-xs shrink-0">
+                    <div class="w-full max-w-2xl h-full bg-white rounded-[1.75rem] border-[5px] border-slate-800 shadow-xl flex flex-col overflow-hidden">
+                        <!-- 頂部白色任務狀態列 -->
+                        <div class="bg-white border-b-4 border-slate-800 px-3 py-1.5 flex items-center justify-between gap-2 shrink-0">
+                            <span class="text-xs sm:text-sm font-black text-slate-700 truncate">操作板：先拿全部 ➔ 再移走</span>
+                            <span id="l1-step-badge" class="bg-amber-200 text-amber-950 border border-amber-500 font-black px-2.5 py-0.5 rounded-full text-xs sm:text-sm shrink-0">
                                 步驟1：拿 ${minuend} 個下來 (0/${minuend})
                             </span>
                         </div>
 
-                        <div class="flex-1 flex min-h-0 overflow-hidden">
-                            <div id="l1-yellow-zone" class="w-1/2 bg-[#fef08a] border-r-2 border-slate-800 flex flex-col items-center justify-between p-2 active-zone-guide overflow-hidden min-h-0">
-                                <span class="bg-amber-400/95 text-amber-950 text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full shrink-0 leading-tight">
-                                    點一點拿 ${minuend} 個下來
-                                </span>
-                                <div class="flex-1 w-full min-h-0 flex flex-wrap justify-center content-center items-center gap-1.5 sm:gap-2 overflow-y-auto p-1.5">
-                                    ${yellowHtml}
+                        <!-- 中間雙色區：左黃備料區 + 右藍拿走區 -->
+                        <div class="flex-1 flex border-b-4 border-slate-800 min-h-0">
+                            <!-- 左側黃區 -->
+                            <div id="l1-yellow-zone" class="flex-1 bg-[#fef08a] border-r-4 border-slate-800 p-2 sm:p-2.5 flex flex-col justify-between relative active-zone-guide min-w-0 overflow-hidden">
+                                <div class="text-[11px] sm:text-xs font-black text-amber-900 bg-white/85 px-2 py-0.5 rounded-md self-start shrink-0">
+                                    全部積木堆（點 ${minuend} 個）
                                 </div>
-                                <div class="text-sm sm:text-lg leading-none shrink-0">⬇️</div>
+                                <div class="flex-1 flex flex-wrap justify-center content-center items-center gap-1 sm:gap-1.5 my-0.5 overflow-y-auto px-0.5">
+                                    ${yellowItemsHtml}
+                                </div>
+                                <div class="flex justify-center shrink-0">
+                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 drop-shadow" viewBox="0 0 60 55">
+                                        <path d="M20 4 H40 V28 H52 L30 50 L8 28 H20 Z" fill="#facc15" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
                             </div>
 
-                            <div id="l1-blue-zone" class="w-1/2 bg-[#bae6fd] flex flex-col items-center justify-between p-2 overflow-hidden min-h-0">
-                                <span class="bg-sky-400/95 text-sky-950 text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full shrink-0 leading-tight">
-                                    拿走區 (${subtrahend} 個)
-                                </span>
-                                <div id="l1-blue-items" data-chip-size="${blueChipSize}" class="flex-1 w-full min-h-0 flex flex-wrap justify-center content-center items-center gap-1.5 sm:gap-2 overflow-y-auto p-1.5"></div>
-                                <div class="text-sm sm:text-lg leading-none shrink-0">⬆️</div>
+                            <!-- 右側藍區：拿走區 -->
+                            <div id="l1-blue-zone" class="flex-1 bg-[#bae6fd] p-2 sm:p-2.5 flex flex-col justify-between relative min-w-0 overflow-hidden">
+                                <div class="text-[11px] sm:text-xs font-black text-sky-950 bg-white/85 px-2 py-0.5 rounded-md self-end shrink-0">
+                                    拿走區（目標 ${subtrahend} 個）
+                                </div>
+                                <div id="l1-blue-items" data-chip-size="${bSize}" class="flex-1 flex flex-wrap justify-center content-center items-center gap-1 sm:gap-1.5 my-0.5 overflow-y-auto px-0.5"></div>
+                                <div class="flex justify-center shrink-0">
+                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 drop-shadow" viewBox="0 0 60 55">
+                                        <path d="M20 50 H40 V26 H52 L30 4 L8 26 H20 Z" fill="#38bdf8" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
 
-                        <div id="l1-green-zone" class="bg-[#dcfce7] border-t-2 border-slate-800 p-1.5 sm:p-2 flex justify-center items-center shrink-0">
-                            <div class="grid grid-cols-5 gap-1.5 w-full max-w-md bg-slate-800 p-1.5 rounded-xl">
+                        <!-- 下方綠色十格操作區 -->
+                        <div id="l1-green-zone" class="h-[34%] min-h-[78px] bg-[#bbf7d0] p-2 sm:p-2.5 flex flex-col justify-center items-center shrink-0">
+                            <div class="grid grid-cols-5 gap-1.5 w-full max-w-md h-full" style="grid-template-rows: repeat(${rowCount}, minmax(0, 1fr));">
                                 ${greenCellsHtml}
                             </div>
                         </div>
                     </div>
                 `;
             } else if (curLvl === 2) {
-                // 【第 2 關：操作板動畫＋列式】
+                // 【第 2 關：操作板（保留板子＋拿走物品自動飛入藍色區域停留）】
                 const totalCells = Math.max(10, Math.ceil(minuend / 5) * 5);
                 const rowCount = Math.ceil(totalCells / 5);
-                let cellHeightClass = 'h-7 sm:h-9';
-                let cellEmojiSize = 'clamp(1.05rem, 3vw, 1.55rem)';
-                if (rowCount === 3) {
-                    cellHeightClass = 'h-5 sm:h-7';
-                    cellEmojiSize = 'clamp(0.85rem, 2.3vw, 1.25rem)';
-                } else if (rowCount >= 4) {
-                    cellHeightClass = 'h-4 sm:h-5';
-                    cellEmojiSize = 'clamp(0.66rem, 1.75vw, 0.95rem)';
-                }
-                const l2BlueChipSize = getBoardItemSize(subtrahend);
+                const gSize = getBoardItemSize(totalCells);
+                const bSize = getBoardItemSize(subtrahend);
 
                 let greenCellsHtml = '';
-                for (let i = 0; i < totalCells; i++) {
-                    const hasItem = i < minuend;
+                for (let c = 0; c < totalCells; c++) {
+                    const hasItem = c < minuend;
                     greenCellsHtml += `
-                        <div class="bg-white border border-slate-700 rounded flex items-center justify-center ${cellHeightClass} p-0.5 overflow-hidden"
-                             style="font-size:${cellEmojiSize}">
-                            ${hasItem ? `<span id="l2-g-item-${i}" class="emoji-pop leading-none">${curIcon}</span>` : ''}
+                        <div class="bg-white border border-slate-500 rounded-md flex items-center justify-center min-h-0 overflow-hidden" style="font-size:${gSize}">
+                            ${hasItem ? `<span id="l2-g-item-${c}" class="emoji-pop">${curIcon}</span>` : ''}
                         </div>
                     `;
                 }
 
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white border-4 border-slate-800 rounded-2xl shadow-xl flex flex-col overflow-hidden">
-                        <div class="bg-white px-3 py-1.5 border-b-2 border-slate-800 flex items-center justify-between shrink-0 gap-2">
-                            <span class="text-xs sm:text-base font-black text-slate-800 truncate">
-                                全部有 <strong class="text-amber-600 text-sm sm:text-lg">${minuend}</strong> 個，拿走 <strong class="text-sky-600 text-sm sm:text-lg">${subtrahend}</strong> 個，剩下幾個？
-                            </span>
-                            <span id="l2-status-badge" class="bg-amber-100 text-amber-900 border border-amber-400 font-black px-2.5 py-0.5 rounded-full text-xs shrink-0">
-                                先填全部有幾個
+                    <div class="w-full max-w-2xl h-full bg-white rounded-[1.75rem] border-[5px] border-slate-800 shadow-xl flex flex-col overflow-hidden">
+                        <div class="bg-white border-b-4 border-slate-800 px-3 py-1.5 flex items-center justify-between gap-2 shrink-0">
+                            <span class="text-xs sm:text-sm font-black text-slate-700 truncate">操作板：填完「全部」看動畫</span>
+                            <span id="l2-status-badge" class="bg-amber-100 text-amber-900 border border-amber-400 font-black px-2.5 py-0.5 rounded-full text-xs sm:text-sm shrink-0">
+                                先數下面綠色格子全部有幾個
                             </span>
                         </div>
 
-                        <div class="flex-1 flex min-h-0 overflow-hidden">
-                            <div class="w-1/2 bg-[#fef08a]/70 border-r-2 border-slate-800 flex flex-col items-center justify-center p-2 overflow-hidden">
-                                <span class="bg-amber-300 text-amber-950 text-[11px] sm:text-sm font-black px-2.5 py-1 rounded-full mb-1 text-center">全部都在下面格子裡</span>
-                                <div class="text-xl sm:text-2xl">⬇️</div>
+                        <div class="flex-1 flex border-b-4 border-slate-800 min-h-0">
+                            <div class="flex-1 bg-[#fef08a] border-r-4 border-slate-800 p-2 sm:p-2.5 flex flex-col justify-between items-center min-w-0">
+                                <span class="text-[11px] sm:text-xs font-black text-amber-900 bg-white/85 px-2 py-0.5 rounded-md">全部已放進綠格</span>
+                                <svg class="w-6 h-6 sm:w-8 sm:h-8 drop-shadow my-auto" viewBox="0 0 60 55">
+                                    <path d="M20 4 H40 V28 H52 L30 50 L8 28 H20 Z" fill="#facc15" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
+                                </svg>
                             </div>
-
-                            <div class="w-1/2 bg-[#bae6fd] flex flex-col items-center justify-between p-2 overflow-hidden min-h-0">
-                                <span class="bg-sky-400/95 text-sky-950 text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full shrink-0 leading-tight">
-                                    拿走區 (${subtrahend} 個)
-                                </span>
-                                <div id="l2-blue-items" data-chip-size="${l2BlueChipSize}" class="flex-1 w-full min-h-0 flex flex-wrap justify-center content-center items-center gap-1.5 sm:gap-2 overflow-y-auto p-1.5"></div>
-                                <div class="text-sm sm:text-lg leading-none shrink-0">⬆️</div>
+                            <div class="flex-1 bg-[#bae6fd] p-2 sm:p-2.5 flex flex-col justify-between min-w-0 overflow-hidden">
+                                <span class="text-[11px] sm:text-xs font-black text-sky-950 bg-white/85 px-2 py-0.5 rounded-md self-end shrink-0">拿走區</span>
+                                <div id="l2-blue-items" data-chip-size="${bSize}" class="flex-1 flex flex-wrap justify-center content-center items-center gap-1 sm:gap-1.5 my-0.5 overflow-y-auto px-0.5"></div>
+                                <div class="flex justify-center shrink-0">
+                                    <svg class="w-6 h-6 sm:w-8 sm:h-8 drop-shadow" viewBox="0 0 60 55">
+                                        <path d="M20 50 H40 V26 H52 L30 4 L8 26 H20 Z" fill="#38bdf8" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="bg-[#dcfce7] border-t-2 border-slate-800 p-1.5 sm:p-2 flex justify-center items-center shrink-0">
-                            <div class="grid grid-cols-5 gap-1.5 w-full max-w-md bg-slate-800 p-1.5 rounded-xl">
+                        <div class="h-[35%] min-h-[80px] bg-[#bbf7d0] p-2 sm:p-2.5 flex flex-col justify-center items-center shrink-0">
+                            <div class="grid grid-cols-5 gap-1.5 w-full max-w-md h-full" style="grid-template-rows: repeat(${rowCount}, minmax(0, 1fr));">
                                 ${greenCellsHtml}
                             </div>
                         </div>
                     </div>
                 `;
             } else if (curLvl === 3) {
-                // 【第 3 關：紅叉叉動畫＋列式】
-                const size = getAdaptiveEmojiSize(minuend);
-                let itemsHtml = '';
-                for (let i = 0; i < minuend; i++) {
-                    itemsHtml += `
-                        <div id="anim-wrap-${i}" class="stage-item-card emoji-pop" style="font-size:${size}">
-                            <span>${curIcon}</span>
-                        </div>
-                    `;
-                }
-
-                wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white/95 rounded-[2rem] border-4 border-sky-300 shadow-lg flex flex-col p-3.5 sm:p-5 overflow-hidden">
-                        <div class="flex items-center justify-between mb-2.5 shrink-0 gap-2">
-                            <span id="anim-step-banner" class="bg-amber-100 text-amber-900 border-2 border-amber-300 font-black px-3 py-1 rounded-xl text-xs sm:text-base truncate">
-                                全部有 ${minuend} 個，拿走 ${subtrahend} 個，剩下幾個？
-                            </span>
-                            <span class="bg-rose-100 border-2 border-rose-300 text-rose-800 font-black px-3 py-1 rounded-xl text-xs sm:text-base shrink-0">
-                                拿走 ${subtrahend} 個
-                            </span>
-                        </div>
-
-                        <div id="anim-plate" class="flex-1 bg-slate-50 rounded-2xl border-4 border-dashed border-slate-300 flex flex-wrap justify-center content-center items-center gap-2.5 sm:gap-3.5 p-4 sm:p-6 overflow-y-auto">
-                            ${itemsHtml}
-                        </div>
-                    </div>
-                `;
-            } else if (curLvl === 4) {
-                // 【第 4 關：遇見 0＋分步顏色聚光燈（一開始整片藍底強調「全部」，填到「剩下」時才亮黃底）】
+                // 【第 3 關：操作板褪除，改用超大紅叉叉動畫＋列式】
                 const size = getAdaptiveEmojiSize(minuend);
                 let itemsHtml = '';
                 for (let i = 0; i < minuend; i++) {
@@ -1295,52 +1269,49 @@
                 wrapper.innerHTML = `
                     <div class="w-full max-w-2xl h-full bg-white/95 rounded-[2rem] border-4 border-sky-300 shadow-lg flex flex-col p-3 sm:p-4 overflow-hidden">
                         <div class="flex items-center justify-between mb-2 shrink-0 gap-1.5 flex-wrap">
-                            <span class="bg-blue-200 text-blue-950 border-2 border-blue-600 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm">
-                                🔵 藍框裡面＝全部 (${minuend} 個)
+                            <span class="bg-sky-100 text-sky-900 border border-sky-300 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm">
+                                先數「全部」有幾個
                             </span>
-                            <div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-black">
-                                <span class="bg-red-100 text-red-800 border border-red-400 px-2 py-0.5 rounded-lg">❌ 紅叉＝拿走 ${subtrahend}</span>
-                                <span id="l5-yellow-badge" class="bg-slate-100 text-slate-500 border border-slate-300 px-2 py-0.5 rounded-lg transition-all">🟡 黃底＝剩下</span>
-                            </div>
+                            <span class="text-[11px] sm:text-xs font-black text-red-700 bg-red-50 border border-red-300 px-2 py-0.5 rounded-lg">
+                                ❌ 大紅叉＝拿走
+                            </span>
                         </div>
-
-                        <!-- 一開始以飽滿淺藍底色包住全部物品，不放黃底避免搶焦點 -->
-                        <div id="anim-plate" class="flex-1 bg-blue-200/75 rounded-2xl border-[6px] border-blue-600 shadow-inner flex flex-wrap justify-center content-center items-center gap-3 sm:gap-4 p-4 sm:p-6 overflow-y-auto transition-colors duration-300">
+                        <div id="anim-plate" class="flex-1 bg-sky-50/70 rounded-2xl border-4 border-sky-300 shadow-inner flex flex-wrap justify-center content-center items-center gap-3 sm:gap-4 p-4 sm:p-6 overflow-y-auto">
                             ${itemsHtml}
                         </div>
                     </div>
                 `;
-            } else if (curLvl === 5) {
-                // 【第 5 關：靜態打叉＋分步顏色聚光燈（一開始整片藍底強調「全部」，填到「剩下」才亮黃底）】
+            } else if (curLvl === 4 || curLvl === 5) {
+                // 【第 4 關 & 第 5 關：聽題目自己畫紅叉叉（第 4 關純非 0；第 5 關加入遇見 0 互動畫叉）】
                 const size = getAdaptiveEmojiSize(minuend);
-                let staticHtml = '';
+                let cleanItemsHtml = '';
                 for (let i = 0; i < minuend; i++) {
-                    const isCrossed = i >= (minuend - subtrahend);
-                    staticHtml += `
-                        <div ${!isCrossed ? 'data-is-remain="true"' : ''} class="stage-item-card emoji-pop ${isCrossed ? 'crossed-card' : ''}" style="font-size:${size}">
-                            <span class="${isCrossed ? 'opacity-65' : ''}">${curIcon}</span>
-                            ${isCrossed ? getBigCrossSVG() : ''}
+                    cleanItemsHtml += `
+                        <div id="l4-item-${i}" onclick="tapLevel4Cross(${i})"
+                             class="stage-item-card emoji-pop cursor-pointer transition-transform active:scale-90"
+                             style="font-size:${size}">
+                            <span>${curIcon}</span>
                         </div>
                     `;
                 }
                 if (minuend === 0) {
-                    staticHtml = `<div class="text-6xl">🍽️</div>`;
+                    cleanItemsHtml = `<div class="text-6xl">🍽️</div>`;
                 }
 
+                const borderTheme = (curLvl === 4) ? 'border-purple-300' : 'border-rose-300';
                 wrapper.innerHTML = `
-                    <div class="w-full max-w-2xl h-full bg-white/95 rounded-[2rem] border-4 border-purple-300 shadow-lg flex flex-col p-3 sm:p-4 overflow-hidden">
+                    <div class="w-full max-w-2xl h-full bg-white/95 rounded-[2rem] border-4 ${borderTheme} shadow-lg flex flex-col p-3 sm:p-4 overflow-hidden">
                         <div class="flex items-center justify-between mb-2 shrink-0 gap-1.5 flex-wrap">
-                            <span class="bg-blue-200 text-blue-950 border-2 border-blue-600 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm">
-                                🔵 藍框裡面＝全部 (${minuend} 個)
+                            <span id="l4-action-badge" class="bg-blue-200 text-blue-950 border-2 border-blue-600 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm">
+                                🔵 步驟1：先數藍框裡「全部」有幾個
                             </span>
                             <div class="flex items-center gap-1.5 text-[11px] sm:text-xs font-black">
-                                <span class="bg-red-100 text-red-800 border border-red-400 px-2 py-0.5 rounded-lg">❌ 紅叉＝拿走</span>
+                                <span id="l4-cross-counter" class="bg-red-100 text-red-800 border border-red-400 px-2 py-0.5 rounded-lg">❌ 已畫叉：0 / ${subtrahend}</span>
                                 <span id="l5-yellow-badge" class="bg-slate-100 text-slate-500 border border-slate-300 px-2 py-0.5 rounded-lg transition-all">🟡 黃底＝剩下</span>
                             </div>
                         </div>
-                        <!-- 一開始以飽滿淺藍底色包住全部物品，不提前亮黃底 -->
                         <div id="anim-plate" class="flex-1 bg-blue-200/75 rounded-2xl border-[6px] border-blue-600 shadow-inner flex flex-wrap justify-center content-center items-center gap-3 sm:gap-4 p-4 sm:p-6 overflow-y-auto transition-colors duration-300">
-                            ${staticHtml}
+                            ${cleanItemsHtml}
                         </div>
                     </div>
                 `;
@@ -1362,15 +1333,11 @@
                             <!-- 左手掌 SVG (手指 1~5：大拇指在左，掌心朝前) -->
                             <div class="flex-1 max-w-[260px] h-full flex flex-col items-center justify-center min-h-0">
                                 <svg id="svg-left-hand" viewBox="0 0 240 245" class="w-full h-full max-h-[210px] overflow-visible select-none">
-                                    <!-- 手腕 -->
                                     <path d="M90 198 L90 236 Q130 242 170 236 L170 198 Z" fill="#FDBA74" stroke="#9A3412" stroke-width="3.5" stroke-linejoin="round" />
-                                    <!-- 手掌主體（含虎口與圓潤掌緣） -->
                                     <path d="M74 134 C66 155, 76 196, 94 202 L166 202 C186 194, 194 156, 190 122 C188 106, 174 102, 164 104 L96 106 C84 108, 78 120, 74 134 Z"
                                           fill="#FED7AA" stroke="#9A3412" stroke-width="3.5" stroke-linejoin="round" />
-                                    <!-- 掌心生命線與掌紋 -->
                                     <path d="M94 138 Q122 146 130 184" fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round" opacity="0.45" />
                                     <path d="M114 128 Q144 132 168 124" fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round" opacity="0.4" />
-                                    <!-- 五根手指動態群組（由 updateFingerVisuals 依握拳/伸直/折下狀態繪製） -->
                                     <g id="left-fingers-layer"></g>
                                 </svg>
                                 <span class="text-xs sm:text-sm font-black text-amber-950 bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300 -mt-1 shrink-0">🤚 左手 (1～5)</span>
@@ -1379,15 +1346,11 @@
                             <!-- 右手掌 SVG (手指 6~10：小指在左、大拇指在右，掌心朝前) -->
                             <div class="flex-1 max-w-[260px] h-full flex flex-col items-center justify-center min-h-0">
                                 <svg id="svg-right-hand" viewBox="0 0 240 245" class="w-full h-full max-h-[210px] overflow-visible select-none">
-                                    <!-- 手腕 -->
                                     <path d="M70 198 L70 236 Q110 242 150 236 L150 198 Z" fill="#FDBA74" stroke="#9A3412" stroke-width="3.5" stroke-linejoin="round" />
-                                    <!-- 手掌主體 -->
                                     <path d="M166 134 C174 155, 164 196, 146 202 L74 202 C54 194, 46 156, 50 122 C52 106, 66 102, 76 104 L144 106 C156 108, 162 120, 166 134 Z"
                                           fill="#FED7AA" stroke="#9A3412" stroke-width="3.5" stroke-linejoin="round" />
-                                    <!-- 掌心生命線與掌紋 -->
                                     <path d="M146 138 Q118 146 110 184" fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round" opacity="0.45" />
                                     <path d="M126 128 Q96 132 72 124" fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round" opacity="0.4" />
-                                    <!-- 五根手指動態群組 -->
                                     <g id="right-fingers-layer"></g>
                                 </svg>
                                 <span class="text-xs sm:text-sm font-black text-amber-950 bg-amber-100 px-3 py-0.5 rounded-full border border-amber-300 -mt-1 shrink-0">✋ 右手 (6～10)</span>
@@ -1709,12 +1672,10 @@
                 container.classList.remove('slot-disabled');
                 if (curLvl === 1) {
                     hint.textContent = '✨ 數數看綠色格子裡「剩下」幾個，填進最後一格！';
-                } else if ((curLvl >= 2 && curLvl <= 4) && !animationTriggered) {
-                    hint.textContent = curLvl === 4
-                        ? '🔵 先數一數「藍框裡面」全部有幾個，填進第一個藍色框！'
-                        : '👀 先數一數「全部」有幾個，填進第一個方框！';
+                } else if ((curLvl === 2 || curLvl === 3) && !animationTriggered) {
+                    hint.textContent = '👀 先數一數「全部」有幾個，填進第一個方框！';
                 } else if (curLvl === 4 || curLvl === 5) {
-                    hint.textContent = '🔵 藍框＝全部 ｜ ❌ 紅叉＝拿走 ｜ 🟡 黃底＝剩下';
+                    hint.textContent = '🔵 先數藍框裡「全部」有幾個，填進第一個藍色框！';
                 } else if (curLvl === 6) {
                     hint.textContent = `🖐️ 點手指比出 ${minuend} 再折進 ${subtrahend} 根（或按 ▶️ 示範動畫），填入剩下幾個！`;
                 } else if (curLvl === 7) {
@@ -1725,7 +1686,7 @@
             }
         }
 
-        // ==================== 8. 第 2~4 關兩段式動畫觸發 ====================
+        // ==================== 8. 第 2、3 關兩段式動畫觸發 ====================
         function triggerLevelAnimation() {
             if (animationTriggered) return;
             animationTriggered = true;
@@ -1752,7 +1713,7 @@
                         blueContainer.appendChild(chip);
                     }
                 }
-            } else if (curLvl === 3 || curLvl === 4) {
+            } else if (curLvl === 3) {
                 playSnd('stamp');
                 const startIdx = minuend - subtrahend;
                 for (let i = 0; i < minuend; i++) {
@@ -1765,11 +1726,84 @@
                         const span = wrap.querySelector('span');
                         if (span) span.classList.add('opacity-65');
                         wrap.insertAdjacentHTML('beforeend', getBigCrossSVG());
-                    } else if (curLvl === 4) {
-                        // 第 4 關：動畫觸發時先保持乾淨白底（等填完「拿走」要算「剩下」時再亮起黃底，避免搶走藍色全部的視覺焦點）
-                        wrap.dataset.isRemain = 'true';
                     }
                 }
+            }
+        }
+
+        // ==================== 第 4 關 & 第 5 關：聽題目自己動手畫紅叉叉（含 0 題型引導與防多畫煞車） ====================
+        function tapLevel4Cross(idx) {
+            if (curLvl !== 4 && curLvl !== 5) return;
+
+            // 防呆 1：必須先把「全部有幾個」填對，才能開始拿走畫叉叉
+            if (inputs[0] !== String(minuend)) {
+                playSnd('err');
+                const hint = document.getElementById('slot-hint');
+                if (hint) hint.textContent = '👆 先數一數藍框裡「全部」有幾個，填進第 1 個藍色框喔！';
+                const s0 = document.getElementById('s0');
+                s0.classList.add('animate-shake');
+                setTimeout(() => s0.classList.remove('animate-shake'), 350);
+                return;
+            }
+
+            // 防呆 2：已經畫叉過的不能重複點
+            if (l4CrossedFlags[idx]) {
+                playSnd('err');
+                return;
+            }
+
+            // 防呆 3（煞車機制）：已經拿走夠了（包括拿走 0 個），自動鎖住不讓他多畫
+            if (l4CrossedCount >= subtrahend) {
+                playSnd('err');
+                const hint = document.getElementById('slot-hint');
+                if (hint) {
+                    hint.textContent = (subtrahend === 0)
+                        ? '🛑 停！這題拿走 0 個，一個都不用畫叉叉喔！請在紅色框填 0！'
+                        : `🛑 停！已經拿走 ${subtrahend} 個囉，把 ${subtrahend} 填進紅色框！`;
+                }
+                return;
+            }
+
+            // 蓋上超大紅叉叉並唱數
+            playSnd('stamp');
+            l4CrossedFlags[idx] = true;
+            l4CrossedCount++;
+
+            const card = document.getElementById(`l4-item-${idx}`);
+            if (card) {
+                card.classList.add('crossed-card');
+                const span = card.querySelector('span');
+                if (span) span.classList.add('opacity-65');
+                card.insertAdjacentHTML('beforeend', getBigCrossSVG());
+            }
+
+            const counterEl = document.getElementById('l4-cross-counter');
+            if (counterEl) {
+                counterEl.textContent = `❌ 已畫叉：${l4CrossedCount} / ${subtrahend}`;
+            }
+
+            const badge = document.getElementById('l4-action-badge');
+            const hint = document.getElementById('slot-hint');
+
+            if (l4CrossedCount < subtrahend) {
+                if (badge) {
+                    badge.className = 'bg-rose-100 text-rose-900 border-2 border-rose-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
+                    badge.textContent = `❌ 步驟2：再點物品畫叉叉 (${l4CrossedCount}/${subtrahend})`;
+                }
+                if (hint) {
+                    hint.textContent = `👇 邊點邊數：「${l4CrossedCount}」⋯⋯ 題目要拿走 ${subtrahend} 個！`;
+                }
+            } else {
+                // 剛好拿走完畢！引導填入紅色框（拿走幾個）
+                if (badge) {
+                    badge.className = 'bg-emerald-100 text-emerald-900 border-2 border-emerald-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
+                    badge.textContent = `🛑 停！拿走 ${subtrahend} 個了，請填進紅色框！`;
+                }
+                if (hint) {
+                    hint.textContent = `✨ 畫好 ${subtrahend} 個紅叉叉了！把 ${subtrahend} 填進紅色框！`;
+                }
+                if (inputs[1] === '') setFocus(1);
+                else if (inputs[2] === '') setFocus(2);
             }
         }
 
@@ -1801,6 +1835,19 @@
             playSnd('click');
             curSlot = idx;
 
+            // 第 4、5 關當填完「全部」準備處理「拿走（第 2 格）」時，更新上方導引徽章提醒聽題目畫叉叉
+            if ((curLvl === 4 || curLvl === 5) && idx === 2 && l4CrossedCount < subtrahend) {
+                const badge = document.getElementById('l4-action-badge');
+                if (badge) {
+                    badge.className = 'bg-rose-100 text-rose-900 border-2 border-rose-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
+                    badge.textContent = `❌ 步驟2：點物品畫出 ${subtrahend} 個紅叉叉！`;
+                }
+                const hint = document.getElementById('slot-hint');
+                if (hint) {
+                    hint.textContent = `👂 聽題目：拿走 ${subtrahend} 個！請點藍框裡的物品畫出 ${subtrahend} 個紅叉叉！`;
+                }
+            }
+
             // 第 4、5 關分步視覺聚光燈：當游標來到第 4 格（🟡 剩下）時，才把藍色底色淡化並點亮「黃色剩下」卡片！
             if ((curLvl === 4 || curLvl === 5) && idx === 4) {
                 const plate = document.getElementById('anim-plate');
@@ -1808,16 +1855,30 @@
                     plate.classList.remove('bg-blue-200/75');
                     plate.classList.add('bg-blue-50/35');
                 }
-                document.querySelectorAll('#anim-plate [data-is-remain="true"]').forEach(card => {
-                    card.classList.add('remain-yellow-highlight');
-                });
+                let remainCount = 0;
+                for (let i = 0; i < minuend; i++) {
+                    if (!l4CrossedFlags[i]) {
+                        remainCount++;
+                        const card = document.getElementById(`l4-item-${i}`);
+                        if (card) card.classList.add('remain-yellow-highlight');
+                    }
+                }
+                const badge = document.getElementById('l4-action-badge');
+                if (badge) {
+                    badge.className = 'bg-yellow-200 text-amber-950 border-2 border-yellow-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
+                    badge.textContent = remainCount === 0
+                        ? '🟡 步驟3：通通被拿走了，剩下 0 個！'
+                        : '🟡 步驟3：數數看亮黃色的剩下幾個！';
+                }
                 const yBadge = document.getElementById('l5-yellow-badge');
                 if (yBadge) {
                     yBadge.className = 'bg-yellow-200 text-amber-950 border-2 border-yellow-500 px-2 py-0.5 rounded-lg transition-all shadow-sm';
                 }
                 const hint = document.getElementById('slot-hint');
                 if (hint) {
-                    hint.textContent = '🟡 現在看亮黃色的卡片！數數看「剩下」幾個填進最後一格！';
+                    hint.textContent = remainCount === 0
+                        ? '🟡 一個都沒剩下（0 個）！把 0 填進最後一格！'
+                        : '🟡 現在看亮黃色的卡片！數數看「剩下」幾個填進最後一格！';
                 }
             }
 
@@ -1874,10 +1935,33 @@
                     if (curSlot === 2) expected = String(subtrahend);
                     if (curSlot === 4) expected = String(difference);
 
-                    // 第 2~4 關：只要第一格「全部有幾個」填對，立刻觸發拿走動畫！
-                    if (curSlot === 0 && inputs[0] === expected && (curLvl >= 2 && curLvl <= 4)) {
+                    // 第 2、3 關：只要第一格「全部有幾個」填對，立刻觸發拿走動畫！
+                    if (curSlot === 0 && inputs[0] === expected && (curLvl === 2 || curLvl === 3)) {
                         triggerLevelAnimation();
                         updateSlotLockState();
+                    }
+
+                    // 第 4、5 關：填對「全部」後，引導他聽題目親手畫紅叉叉（遇見拿走 0 個則特別提示不用畫叉）
+                    if (curSlot === 0 && inputs[0] === expected && (curLvl === 4 || curLvl === 5)) {
+                        const badge = document.getElementById('l4-action-badge');
+                        const hint = document.getElementById('slot-hint');
+                        if (subtrahend === 0) {
+                            if (badge) {
+                                badge.className = 'bg-emerald-100 text-emerald-900 border-2 border-emerald-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
+                                badge.textContent = '✨ 拿走 0 個！一個都不用畫叉叉喔！';
+                            }
+                            if (hint) {
+                                hint.textContent = '✨ 拿走 0 個！一個都不用畫叉叉喔！繼續完成減法算式！';
+                            }
+                        } else {
+                            if (badge) {
+                                badge.className = 'bg-rose-100 text-rose-900 border-2 border-rose-500 font-black px-2.5 py-0.5 rounded-xl text-xs sm:text-sm shadow-sm';
+                                badge.textContent = `❌ 步驟2：點物品畫出 ${subtrahend} 個紅叉叉！`;
+                            }
+                            if (hint) {
+                                hint.textContent = `👂 聽題目：拿走 ${subtrahend} 個！請點藍框裡的物品畫出 ${subtrahend} 個紅叉叉！`;
+                            }
+                        }
                     }
 
                     if (inputs[curSlot] === expected || inputs[curSlot].length === 2) {
@@ -1987,7 +2071,7 @@
             document.getElementById('setting-max-subtrahend').value = maxSubtrahend;
             document.getElementById('setting-level').value = unlockedLvl;
             document.getElementById('setting-q-per-level').value = questionsPerLevel;
-            document.getElementById('setting-lvl5-zero').checked = level5IncludeZero;
+            document.getElementById('setting-lvl5-mix').checked = level5MixNonZero;
             document.getElementById('modal-settings').classList.remove('hidden');
             document.getElementById('modal-settings').classList.add('flex');
         }
@@ -2004,7 +2088,7 @@
             const newSub = parseInt(document.getElementById('setting-max-subtrahend').value, 10);
             const newLvl = parseInt(document.getElementById('setting-level').value, 10);
             const newQCount = parseInt(document.getElementById('setting-q-per-level').value, 10);
-            level5IncludeZero = document.getElementById('setting-lvl5-zero').checked;
+            level5MixNonZero = document.getElementById('setting-lvl5-mix').checked;
 
             if (!isNaN(newMinuend) && newMinuend >= 2 && newMinuend <= 50) {
                 maxMinuend = newMinuend;
